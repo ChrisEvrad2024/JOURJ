@@ -136,7 +136,7 @@ export function ProductForm({ product, categories, onSubmit, onCancel }: Product
               name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Prix (€)</FormLabel>
+                  <FormLabel>Prix (XAF)</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} />
                   </FormControl>

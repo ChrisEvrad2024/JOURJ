@@ -189,7 +189,7 @@ const ProductsManagement = () => {
                       </TableCell>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell>{category?.name || product.category}</TableCell>
-                      <TableCell className="text-right">{product.price.toFixed(2)} €</TableCell>
+                      <TableCell className="text-right">{product.price.toFixed(2)} XAF</TableCell>
                       <TableCell className="text-center">{product.stock || 0}</TableCell>
                       <TableCell className="text-center">
                         {getStatusBadge(product.stock || 0)}

@@ -74,36 +74,6 @@ const sampleCustomers: Customer[] = [
     createdAt: new Date("2022-11-10")
   },
   {
-    id: "cust-002",
-    name: "Jean Martin",
-    email: "jean.martin@example.com",
-    phone: "+33 6 23 45 67 89",
-    address: "45 Avenue des Arbres",
-    city: "Lyon",
-    postalCode: "69002",
-    country: "France",
-    totalOrders: 3,
-    totalSpent: 154.50,
-    lastOrderDate: new Date("2023-06-02"),
-    status: "active",
-    createdAt: new Date("2023-01-15")
-  },
-  {
-    id: "cust-003",
-    name: "Sophie Bernard",
-    email: "sophie.bernard@example.com",
-    phone: "+33 6 34 56 78 90",
-    address: "12 Boulevard du Parc",
-    city: "Marseille",
-    postalCode: "13001",
-    country: "France",
-    totalOrders: 1,
-    totalSpent: 45.75,
-    lastOrderDate: new Date("2023-05-30"),
-    status: "active",
-    createdAt: new Date("2023-04-22")
-  },
-  {
     id: "cust-004",
     name: "Thomas Robert",
     email: "thomas.robert@example.com",
@@ -117,21 +87,6 @@ const sampleCustomers: Customer[] = [
     status: "inactive",
     createdAt: new Date("2023-05-17")
   },
-  {
-    id: "cust-005",
-    name: "Laura Petit",
-    email: "laura.petit@example.com",
-    phone: "+33 6 56 78 90 12",
-    address: "67 Rue des Roses",
-    city: "Lille",
-    postalCode: "59000",
-    country: "France",
-    totalOrders: 7,
-    totalSpent: 412.30,
-    lastOrderDate: new Date("2023-06-05"),
-    status: "active",
-    createdAt: new Date("2022-09-05")
-  }
 ];
 
 const CustomersManagement = () => {
@@ -162,7 +117,7 @@ const CustomersManagement = () => {
 
   // Format currency
   const formatCurrency = (amount: number) => {
-    return amount.toFixed(2) + " €";
+    return amount.toFixed(2) + " XAF";
   };
 
   // Get status badge

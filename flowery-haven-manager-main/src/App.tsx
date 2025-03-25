@@ -110,6 +110,13 @@ const Contact = lazyWithErrorHandling(() => import('./pages/Contact'));
 const About = lazyWithErrorHandling(() => import('./pages/About'));
 // Ajoutons l'import de la page de devis
 const Quote = lazyWithErrorHandling(() => import('./pages/Quote'));
+// Ajout du dashboard de devis pour les utilisateurs
+const QuoteDashboard = lazyWithErrorHandling(() => import('./pages/account/QuoteDashboard'));
+// Ajout des composants admin pour la gestion des devis et autres
+const AdminOrdersManagement = lazyWithErrorHandling(() => import('./pages/admin/AdminOrdersManagement'));
+const AdminQuotesManagement = lazyWithErrorHandling(() => import('./pages/admin/AdminQuotesManagement'));
+const AdminAnalytics = lazyWithErrorHandling(() => import('./pages/admin/AdminAnalytics'));
+const AdminSettings = lazyWithErrorHandling(() => import('./pages/admin/AdminSettings'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -254,6 +261,7 @@ const App = () => {
                       <Route index element={<MyAccount />} />
                       <Route path="profile" element={<ProfileSettings />} />
                       <Route path="orders" element={<OrderHistory />} />
+                      <Route path="quotes" element={<QuoteDashboard />} />
                       <Route path="addresses" element={<Addresses />} />
                     </Route>
                     
@@ -267,10 +275,10 @@ const App = () => {
                       <Route path="products" element={<ProductsManagement />} />
                       <Route path="blog" element={<BlogManagement />} />
                       <Route path="customers" element={<CustomersManagement />} />
-                      {/* Ces routes seront implémentées plus tard */}
-                      <Route path="orders" element={<div className="p-4">Gestion des commandes (à implémenter)</div>} />
-                      <Route path="analytics" element={<div className="p-4">Statistiques (à implémenter)</div>} />
-                      <Route path="settings" element={<div className="p-4">Paramètres (à implémenter)</div>} />
+                      <Route path="orders" element={<AdminOrdersManagement />} />
+                      <Route path="quotes" element={<AdminQuotesManagement />} />
+                      <Route path="analytics" element={<AdminAnalytics />} />
+                      <Route path="settings" element={<AdminSettings />} />
                     </Route>
                     
                     {/* Route 404 */}

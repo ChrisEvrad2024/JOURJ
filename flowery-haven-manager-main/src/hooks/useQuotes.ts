@@ -1,96 +1,260 @@
-// src/hooks/useQuotes.js
-import { useState, useEffect, useCallback } from 'react';
-import { QuoteService } from '../services';
-import { useAuth } from '../contexts/AuthContext';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { QuoteService } from '@/services';
 
+/**
+ * Hook personnalisé pour gérer les devis de l'utilisateur
+ */
 export const useQuotes = () => {
     const [quotes, setQuotes] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const { currentUser } = useAuth();
 
-    const fetchUserQuotes = useCallback(async () => {
-        if (!currentUser) return;
-
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await QuoteService.getQuotesByUserId(currentUser.id);
-            setQuotes(data);
-        } catch (err) {
-            setError(err.message || 'Failed to fetch quotes');
-            console.error('Error fetching quotes:', err);
-        } finally {
+    // Charger les devis au démarrage
+    useEffect(() => {
+        if (!currentUser) {
+            setQuotes([]);
             setLoading(false);
+            return;
         }
+
+        const fetchQuotes = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Utilisateur admin : tous les devis ou devis filtrés
+                const userQuotes = currentUser.role === 'admin'
+                    ? await QuoteService.getAllQuotes()
+                    : await QuoteService.getUserQuotes(currentUser.id);
+
+                setQuotes(userQuotes);
+            } catch (err) {
+                console.error('Erreur lors du chargement des devis:', err);
+                setError(err.message || 'Erreur lors du chargement des devis');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchQuotes();
     }, [currentUser]);
 
-    const requestQuote = useCallback(async (quoteData) => {
-        setLoading(true);
+    /**
+     * Créer un nouveau devis
+     * @param {Object} quoteData - Données du devis
+     * @returns {Promise<Object>} Le devis créé
+     */
+    const createQuote = async (quoteData) => {
         try {
-            const result = await QuoteService.createQuote({
-                ...quoteData,
-                userId: currentUser?.id
-            });
-
-            toast.success('Demande de devis envoyée', {
-                description: 'Nous reviendrons vers vous rapidement.'
-            });
-
-            fetchUserQuotes();
-            return result;
+            const newQuote = await QuoteService.createQuote(quoteData);
+            setQuotes([newQuote, ...quotes]);
+            return newQuote;
         } catch (err) {
-            toast.error('Échec de la demande de devis', {
-                description: err.message || 'Une erreur est survenue'
-            });
-            console.error('Error requesting quote:', err);
+            console.error('Erreur lors de la création du devis:', err);
+            setError(err.message || 'Erreur lors de la création du devis');
             throw err;
-        } finally {
-            setLoading(false);
         }
-    }, [currentUser, fetchUserQuotes]);
+    };
 
-    const acceptQuote = useCallback(async (quoteId) => {
-        setLoading(true);
+    /**
+     * Accepter un devis
+     * @param {string} quoteId - ID du devis
+     * @param {string} notes - Notes additionnelles
+     * @returns {Promise<boolean>} Succès de l'opération
+     */
+    const acceptQuote = async (quoteId, notes = '') => {
         try {
-            await QuoteService.updateQuoteStatus(quoteId, 'accepted');
-            toast.success('Devis accepté');
-            fetchUserQuotes();
-        } catch (err) {
-            toast.error('Échec de l\'acceptation du devis');
-            console.error('Error accepting quote:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [fetchUserQuotes]);
+            await QuoteService.acceptQuote(quoteId, notes);
 
-    const rejectQuote = useCallback(async (quoteId) => {
-        setLoading(true);
+            // Mettre à jour l'état local
+            setQuotes(quotes.map(quote => {
+                if (quote.id === quoteId) {
+                    return {
+                        ...quote,
+                        status: 'accepted',
+                        statusHistory: [
+                            ...(quote.statusHistory || []),
+                            {
+                                status: 'accepted',
+                                date: new Date().toISOString(),
+                                notes: notes || 'Devis accepté'
+                            }
+                        ],
+                        acceptedAt: new Date().toISOString()
+                    };
+                }
+                return quote;
+            }));
+
+            return true;
+        } catch (err) {
+            console.error(`Erreur lors de l'acceptation du devis ${quoteId}:`, err);
+            setError(err.message || `Erreur lors de l'acceptation du devis`);
+            return false;
+        }
+    };
+
+    /**
+     * Refuser un devis
+     * @param {string} quoteId - ID du devis
+     * @param {string} reason - Raison du refus
+     * @returns {Promise<boolean>} Succès de l'opération
+     */
+    const declineQuote = async (quoteId, reason) => {
         try {
-            await QuoteService.updateQuoteStatus(quoteId, 'rejected');
-            toast.success('Devis refusé');
-            fetchUserQuotes();
-        } catch (err) {
-            toast.error('Échec du refus du devis');
-            console.error('Error rejecting quote:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [fetchUserQuotes]);
+            await QuoteService.declineQuote(quoteId, reason);
 
-    useEffect(() => {
-        if (currentUser) {
-            fetchUserQuotes();
+            // Mettre à jour l'état local
+            setQuotes(quotes.map(quote => {
+                if (quote.id === quoteId) {
+                    return {
+                        ...quote,
+                        status: 'declined',
+                        statusHistory: [
+                            ...(quote.statusHistory || []),
+                            {
+                                status: 'declined',
+                                date: new Date().toISOString(),
+                                notes: `Devis refusé: ${reason}`
+                            }
+                        ],
+                        declinedAt: new Date().toISOString(),
+                        declineReason: reason
+                    };
+                }
+                return quote;
+            }));
+
+            return true;
+        } catch (err) {
+            console.error(`Erreur lors du refus du devis ${quoteId}:`, err);
+            setError(err.message || `Erreur lors du refus du devis`);
+            return false;
         }
-    }, [currentUser, fetchUserQuotes]);
+    };
+
+    /**
+     * Récupère un devis spécifique
+     * @param {string} quoteId - ID du devis
+     * @returns {Object|null} Le devis ou null si non trouvé
+     */
+    const getQuoteById = (quoteId) => {
+        return quotes.find(quote => quote.id === quoteId) || null;
+    };
+
+    /**
+     * Filtrer les devis par statut
+     * @param {string} status - Statut à filtrer
+     * @returns {Array} Devis filtrés
+     */
+    const getQuotesByStatus = (status) => {
+        if (!status || status === 'all') return quotes;
+        return quotes.filter(quote => quote.status === status);
+    };
+
+    /**
+     * Mise à jour du statut d'un devis (admin uniquement)
+     * @param {string} quoteId - ID du devis
+     * @param {string} newStatus - Nouveau statut
+     * @param {string} notes - Notes additionnelles
+     * @returns {Promise<boolean>} Succès de l'opération
+     */
+    const updateQuoteStatus = async (quoteId, newStatus, notes = '') => {
+        if (!currentUser || currentUser.role !== 'admin') {
+            setError('Permission refusée');
+            return false;
+        }
+
+        try {
+            await QuoteService.updateQuoteStatus(quoteId, newStatus, notes);
+
+            // Mettre à jour l'état local
+            setQuotes(quotes.map(quote => {
+                if (quote.id === quoteId) {
+                    return {
+                        ...quote,
+                        status: newStatus,
+                        statusHistory: [
+                            ...(quote.statusHistory || []),
+                            {
+                                status: newStatus,
+                                date: new Date().toISOString(),
+                                notes
+                            }
+                        ]
+                    };
+                }
+                return quote;
+            }));
+
+            return true;
+        } catch (err) {
+            console.error(`Erreur lors de la mise à jour du statut du devis ${quoteId}:`, err);
+            setError(err.message || `Erreur lors de la mise à jour du statut du devis`);
+            return false;
+        }
+    };
+
+    /**
+     * Ajouter une proposition à un devis (admin uniquement)
+     * @param {string} quoteId - ID du devis
+     * @param {Object} proposalData - Données de la proposition
+     * @returns {Promise<boolean>} Succès de l'opération
+     */
+    const addProposal = async (quoteId, proposalData) => {
+        if (!currentUser || currentUser.role !== 'admin') {
+            setError('Permission refusée');
+            return false;
+        }
+
+        try {
+            await QuoteService.addProposal(quoteId, proposalData);
+
+            // Mettre à jour l'état local
+            setQuotes(quotes.map(quote => {
+                if (quote.id === quoteId) {
+                    return {
+                        ...quote,
+                        status: 'sent',
+                        proposal: {
+                            ...proposalData,
+                            id: `prop-${Date.now()}`,
+                            createdBy: currentUser.id,
+                            createdAt: new Date().toISOString()
+                        },
+                        statusHistory: [
+                            ...(quote.statusHistory || []),
+                            {
+                                status: 'sent',
+                                date: new Date().toISOString(),
+                                notes: 'Proposition de devis envoyée'
+                            }
+                        ]
+                    };
+                }
+                return quote;
+            }));
+
+            return true;
+        } catch (err) {
+            console.error(`Erreur lors de l'ajout d'une proposition au devis ${quoteId}:`, err);
+            setError(err.message || `Erreur lors de l'ajout d'une proposition au devis`);
+            return false;
+        }
+    };
 
     return {
         quotes,
         loading,
         error,
-        requestQuote,
+        createQuote,
         acceptQuote,
-        rejectQuote
+        declineQuote,
+        getQuoteById,
+        getQuotesByStatus,
+        updateQuoteStatus,
+        addProposal
     };
-};useAddresses.ts
+};

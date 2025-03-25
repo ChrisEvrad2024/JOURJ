@@ -186,7 +186,7 @@ const Wishlist = () => {
                         <h3 className="font-medium mb-1 group-hover:text-primary transition-colors">{item.name}</h3>
                       </Link>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="font-medium">{item.price.toFixed(2)} €</span>
+                        <span className="font-medium">{item.price.toFixed(2)} XAF</span>
                         <button 
                           onClick={() => handleAddToCart(item)}
                           className="p-2 bg-primary/10 text-primary rounded-full hover:bg-primary hover:text-white transition-colors"

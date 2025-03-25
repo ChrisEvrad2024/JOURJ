@@ -111,7 +111,7 @@ const Cart = () => {
                                 <Link to={`/product/${item.product.id}`} className="font-medium hover:text-primary transition-colors">
                                   {item.product.name}
                                 </Link>
-                                <p className="text-muted-foreground text-sm mt-1">{item.product.price.toFixed(2)} € / unité</p>
+                                <p className="text-muted-foreground text-sm mt-1">{item.product.price.toFixed(2)} XAF / unité</p>
                               </div>
                             </div>
                           </td>
@@ -137,7 +137,7 @@ const Cart = () => {
                             </div>
                           </td>
                           <td className="py-4 px-6 text-right font-medium">
-                            {(item.product.price * item.quantity).toFixed(2)} €
+                            {(item.product.price * item.quantity).toFixed(2)} XAF
                           </td>
                           <td className="py-4 px-6 text-right">
                             <button 
@@ -163,17 +163,17 @@ const Cart = () => {
                   <div className="space-y-4 border-b border-border pb-6 mb-6">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Sous-total</span>
-                      <span className="font-medium">{cartTotal.toFixed(2)} €</span>
+                      <span className="font-medium">{cartTotal.toFixed(2)} XAF</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Livraison</span>
-                      <span className="font-medium">7.90 €</span>
+                      <span className="font-medium">7.90 XAF</span>
                     </div>
                   </div>
                   
                   <div className="flex justify-between mb-8">
                     <span className="text-lg">Total</span>
-                    <span className="text-lg font-medium">{(cartTotal + 7.9).toFixed(2)} €</span>
+                    <span className="text-lg font-medium">{(cartTotal + 7.9).toFixed(2)} XAF</span>
                   </div>
                   
                   <button 

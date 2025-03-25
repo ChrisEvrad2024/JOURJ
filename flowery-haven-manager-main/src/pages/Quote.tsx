@@ -196,11 +196,11 @@ const QuotePage = () => {
                         <SelectValue placeholder="Sélectionner un budget" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="<100">Moins de 100€</SelectItem>
-                        <SelectItem value="100-300">Entre 100€ et 300€</SelectItem>
-                        <SelectItem value="300-500">Entre 300€ et 500€</SelectItem>
-                        <SelectItem value="500-1000">Entre 500€ et 1000€</SelectItem>
-                        <SelectItem value=">1000">Plus de 1000€</SelectItem>
+                        <SelectItem value="<100">Moins de 100XAF</SelectItem>
+                        <SelectItem value="100-300">Entre 100XAF et 300XAF</SelectItem>
+                        <SelectItem value="300-500">Entre 300XAF et 500XAF</SelectItem>
+                        <SelectItem value="500-1000">Entre 500XAF et 1000XAF</SelectItem>
+                        <SelectItem value=">1000">Plus de 1000XAF</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

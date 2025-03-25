@@ -634,7 +634,7 @@ class OrderService {
             order.statusHistory.push({
                 status: this.ORDER_STATUS.REFUNDED,
                 date: new Date().toISOString(),
-                notes: `Remboursement de ${refundAmount.toFixed(2)} € - Raison: ${reason}`,
+                notes: `Remboursement de ${refundAmount.toFixed(2)} XAF - Raison: ${reason}`,
                 updatedBy: currentUser.id
             });
             order.refundAmount = refundAmount;
@@ -859,7 +859,7 @@ class OrderService {
                     newOrder.statusHistory.push({
                         status: this.ORDER_STATUS.REFUNDED,
                         date: newOrder.refundedAt,
-                        notes: `Remboursement de ${total.toFixed(2)} € - Raison: Produit non conforme`,
+                        notes: `Remboursement de ${total.toFixed(2)} XAF - Raison: Produit non conforme`,
                         updatedBy: currentUser.id
                     });
                 }

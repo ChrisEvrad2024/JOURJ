@@ -292,7 +292,7 @@ const ProductDetail = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-2xl text-primary font-medium">{product.price?.toFixed(2)} €</p>
+                <p className="text-2xl text-primary font-medium">{product.price?.toFixed(2)} XAF</p>
                 
                 {/* SKU */}
                 {product.sku && (

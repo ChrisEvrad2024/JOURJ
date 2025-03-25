@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Product } from '@/types/product';
 import { ShoppingBag, Heart, CheckCircle, XCircle } from 'lucide-react';
-import { addToCart } from '@/lib/cart';
-import { addToWishlist, removeFromWishlist, isInWishlist } from '@/lib/wishlist';
+import { useCart } from '@/hooks/useCart';
+import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 
 interface ProductCardProps {
@@ -12,21 +12,23 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [inWishlist, setInWishlist] = useState(isInWishlist(product.id));
 
   const quickAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    addToCart(product, 1);
+    // Utiliser le hook pour ajouter au panier au lieu de la fonction de lib
+    const success = addToCart(product, 1);
     
-    // Dispatch custom event to update cart icon
-    window.dispatchEvent(new Event('cartUpdated'));
-    
-    toast.success("Ajouté au panier", {
-      description: `${product.name} a été ajouté à votre panier.`,
-      duration: 3000,
-    });
+    if (success !== false) {
+      toast.success("Ajouté au panier", {
+        description: `${product.name} a été ajouté à votre panier.`,
+        duration: 3000,
+      });
+    }
   };
   
   const toggleWishlist = (e: React.MouseEvent) => {
@@ -128,7 +130,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         
         <div className="mt-4 text-center">
           <h3 className="font-serif text-lg font-medium">{product.name}</h3>
-          <p className="mt-1 text-primary font-medium">{product.price?.toFixed(2) || "0.00"} €</p>
+          <p className="mt-1 text-primary font-medium">{product.price?.toFixed(2) || "0.00"} XAF</p>
           {!isInStock && (
             <p className="text-xs text-red-500 mt-1">Rupture de stock</p>
           )}
