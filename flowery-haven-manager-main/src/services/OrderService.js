@@ -1,7 +1,7 @@
 import DbService from './db/DbService';
 import { STORES } from './db/DbConfig';
 import AuthService from './AuthService';
-import CartService from './CartService';
+import { CartService } from './CartService';  // Correction de l'import ici
 import ProductService from './ProductService';
 import { v4 as uuidv4 } from 'uuid';
 

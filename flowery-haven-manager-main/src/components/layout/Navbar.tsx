@@ -1,11 +1,21 @@
 // src/components/layout/Navbar.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingBag, Menu, X, Heart, User } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, Heart, User, LogOut, Settings } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useWishlist } from '../../hooks/useWishlist';
 import { useAuth } from '../../contexts/AuthContext';
 import LanguageSelector from '@/components/shared/LanguageSelector';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -13,7 +23,7 @@ export const Navbar = () => {
   
   const { cartItems, cartTotal, cartCount } = useCart();
   const { wishlistCount } = useWishlist();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isAdmin } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +39,11 @@ export const Navbar = () => {
   const handleLogout = () => {
     logout();
     setIsMobileMenuOpen(false);
+  };
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.charAt(0).toUpperCase();
   };
 
   return (
@@ -84,6 +99,13 @@ export const Navbar = () => {
           >
             Contact
           </Link>
+          {/* Ajout d'un lien pour les devis */}
+          <Link 
+            to="/quote" 
+            className="text-sm font-medium hover:text-primary transition-colors animate-underline"
+          >
+            Devis
+          </Link>
         </nav>
 
         {/* Icons */}
@@ -108,12 +130,74 @@ export const Navbar = () => {
               </span>
             )}
           </Link>
-          <Link 
-            to={currentUser ? "/account" : "/auth/login"} 
-            className="p-2 hover:text-primary transition-colors"
-          >
-            <User size={20} />
-          </Link>
+          
+          {currentUser ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-2 hover:text-primary transition-colors relative">
+                  <Avatar className="h-8 w-8 border-2 border-primary cursor-pointer">
+                    <AvatarFallback>
+                      {getInitials(currentUser.firstName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="sr-only">Profil utilisateur</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{currentUser.firstName} {currentUser.lastName}</span>
+                    <span className="text-xs text-muted-foreground">{currentUser.email}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/account" className="w-full cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Mon compte
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/account/orders" className="w-full cursor-pointer">
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Mes commandes
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/account/profile" className="w-full cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Paramètres
+                  </Link>
+                </DropdownMenuItem>
+                
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="w-full cursor-pointer">
+                        <Badge variant="outline" className="mr-2 bg-primary/10 text-primary">Admin</Badge>
+                        Dashboard administration
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500 cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link 
+              to="/auth/login" 
+              className="p-2 hover:text-primary transition-colors"
+            >
+              <User size={20} />
+            </Link>
+          )}
+          
           <button 
             className="md:hidden p-2 hover:text-primary transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -169,6 +253,13 @@ export const Navbar = () => {
             >
               Contact
             </Link>
+            <Link 
+              to="/quote" 
+              className="text-lg font-medium hover:text-primary transition-colors animate-underline"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Devis
+            </Link>
             
             {currentUser ? (
               <>
@@ -179,8 +270,18 @@ export const Navbar = () => {
                 >
                   Mon compte
                 </Link>
+                {isAdmin && (
+                  <Link 
+                    to="/admin" 
+                    className="text-lg font-medium text-primary font-semibold hover:text-primary/80 transition-colors animate-underline flex items-center gap-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Badge variant="outline" className="bg-primary/10 text-primary">Admin</Badge>
+                    Dashboard
+                  </Link>
+                )}
                 <button
-                  className="text-lg font-medium hover:text-primary transition-colors animate-underline"
+                  className="text-lg font-medium hover:text-red-500 transition-colors animate-underline"
                   onClick={handleLogout}
                 >
                   Déconnexion

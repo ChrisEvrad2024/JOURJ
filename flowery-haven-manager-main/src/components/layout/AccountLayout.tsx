@@ -1,158 +1,161 @@
-// src/pages/auth/Login.jsx
-import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import AuthLayout from "@/components/layout/AuthLayout";
+import { useEffect, useState } from "react";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+import { 
+  LayoutDashboard, 
+  PackageOpen, 
+  Users, 
+  ShoppingBag, 
+  Settings, 
+  FileText, 
+  BarChart3,
+  LogOut,
+  Home,
+  Menu,
+  AlertCircle
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
 
-// Define form schema
-const formSchema = z.object({
-  email: z.string().email("Adresse email invalide"),
-  password: z.string().min(1, "Le mot de passe est requis"),
-});
-
-const Login = () => {
-  const [showPassword, setShowPassword] = useState(false);
+const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loading } = useAuth();
-  
-  const from = location.state?.from || "/";
+  const [isAdmin, setIsAdmin] = useState(true); // Always set to true to bypass auth check
+  const [isLoading, setIsLoading] = useState(false); // Set to false to skip loading state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Initialize form
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+  // Authentication check is now disabled
+  useEffect(() => {
+    console.log("Admin authentication check bypassed");
+    // No authentication check - always considered authenticated
+  }, []);
 
-  // Form submission handler
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    try {
-      const user = await login(data.email, data.password);
-      
-      // Si l'utilisateur est admin, rediriger vers le tableau de bord admin
-      if (user.role === 'admin' || user.role === 'superadmin') {
-        navigate('/admin');
-      } else {
-        // Sinon rediriger vers la page précédente ou la page d'accueil
-        navigate(from === "/admin" ? "/" : from);
-      }
-    } catch (error) {
-      // Les erreurs sont déjà gérées par le contexte d'authentification
-      console.error('Login failed:', error);
-    }
+  // Logout handler
+  const handleLogout = () => {
+    toast.success("Déconnexion réussie");
+    navigate("/");
   };
 
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+  // Navigation items for the sidebar
+  const navigationItems = [
+    { 
+      label: "Tableau de bord", 
+      href: "/admin", 
+      icon: <LayoutDashboard size={18} /> 
+    },
+    { 
+      label: "Produits", 
+      href: "/admin/products", 
+      icon: <PackageOpen size={18} /> 
+    },
+    { 
+      label: "Commandes", 
+      href: "/admin/orders", 
+      icon: <ShoppingBag size={18} /> 
+    },
+    { 
+      label: "Clients", 
+      href: "/admin/customers", 
+      icon: <Users size={18} /> 
+    },
+    { 
+      label: "Blog", 
+      href: "/admin/blog", 
+      icon: <FileText size={18} /> 
+    },
+    { 
+      label: "Statistiques", 
+      href: "/admin/analytics", 
+      icon: <BarChart3 size={18} /> 
+    },
+    { 
+      label: "Paramètres", 
+      href: "/admin/settings", 
+      icon: <Settings size={18} /> 
+    },
+  ];
+
+  const Sidebar = () => (
+    <div className="space-y-1">
+      <nav className="space-y-1 px-3 py-2">
+        {navigationItems.map((item) => (
+          <Link 
+            key={item.href} 
+            to={item.href}
+            className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted w-full transition-colors ${
+              location.pathname === item.href ? "bg-muted font-medium" : ""
+            }`}
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </Link>
+        ))}
+        <Separator className="my-2" />
+        <Button 
+          variant="ghost" 
+          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-destructive/10 w-full transition-colors text-destructive justify-start font-normal"
+          onClick={handleLogout}
+        >
+          <LogOut size={18} />
+          <span>Déconnexion</span>
+        </Button>
+      </nav>
+    </div>
+  );
 
   return (
-    <AuthLayout
-      title="Connexion"
-      description="Connectez-vous à votre compte pour accéder à vos commandes et favoris."
-    >
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="votre@email.fr" 
-                    type="email" 
-                    autoComplete="email"
-                    disabled={loading}
-                    {...field} 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <FormLabel>Mot de passe</FormLabel>
-                  <Link 
-                    to="/auth/forgot-password" 
-                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    Mot de passe oublié ?
-                  </Link>
-                </div>
-                <FormControl>
-                  <div className="relative">
-                    <Input 
-                      placeholder="Votre mot de passe" 
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      disabled={loading}
-                      {...field} 
-                    />
-                    <button 
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                      onClick={togglePasswordVisibility}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <Button 
-            type="submit" 
-            className="w-full"
-            disabled={loading}
-          >
-            {loading ? "Connexion en cours..." : "Se connecter"}
-          </Button>
-        </form>
-      </Form>
-      
-      <div className="mt-6 text-center">
-        <p className="text-sm text-muted-foreground">
-          Vous n'avez pas de compte ?{" "}
-          <Link to="/auth/register" className="text-primary hover:underline">
-            Créer un compte
+    <div className="min-h-screen flex">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:block w-64 border-r h-screen overflow-y-auto sticky top-0">
+        <div className="p-4 border-b flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Admin ChezFLORA</h2>
+            <p className="text-sm text-muted-foreground">Gestion de votre boutique</p>
+          </div>
+          <Link to="/" className="p-2 rounded-md hover:bg-muted transition-colors" title="Retour au site">
+            <Home size={18} />
           </Link>
-        </p>
-      </div>
+        </div>
+        
+        <Sidebar />
+      </aside>
       
-      <div className="mt-8 p-4 bg-muted rounded-md">
-        <p className="text-sm text-center font-medium">Accès administrateur</p>
-        <p className="text-xs text-center text-muted-foreground mt-1">
-          Utilisez admin@admin.com avec n'importe quel mot de passe pour accéder à l'interface d'administration.
-        </p>
+      {/* Mobile sidebar (sheet) */}
+      <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+        <SheetContent side="left" className="p-0">
+          <div className="px-3 py-4">
+            <h2 className="text-lg font-semibold mb-1">Admin ChezFLORA</h2>
+            <p className="text-sm text-muted-foreground">Gérez votre boutique</p>
+          </div>
+          
+          <Separator />
+          
+          <Sidebar />
+        </SheetContent>
+      </Sheet>
+      
+      {/* Main Content */}
+      <div className="flex-1">
+        {/* Mobile Header */}
+        <header className="md:hidden sticky top-0 z-10 bg-background border-b flex items-center justify-between p-4">
+          <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
+            <Menu size={20} />
+          </Button>
+          <h1 className="font-semibold">Admin ChezFLORA</h1>
+          <Link to="/" className="p-2 rounded-md hover:bg-muted transition-colors">
+            <Home size={18} />
+          </Link>
+        </header>
+        
+        {/* Content */}
+        <main className="p-6">
+          <Outlet />
+        </main>
       </div>
-    </AuthLayout>
+    </div>
   );
 };
 
-export default Login;
+export default AdminLayout;

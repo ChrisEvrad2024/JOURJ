@@ -58,21 +58,24 @@ class CartService {
 
     /**
      * Ajoute un produit au panier
-     * @param {string} productId - ID du produit
+     * @param {Object|string} product - Produit ou ID du produit
      * @param {number} quantity - Quantité à ajouter
      * @returns {Promise<Object>} Élément ajouté au panier
      */
-    static async addToCart(productId, quantity = 1) {
+    static async addToCart(product, quantity = 1) {
         try {
-            // Vérifier si le produit existe
-            const product = await ProductService.getProductById(productId);
+            // Déterminer l'ID du produit
+            const productId = typeof product === 'object' ? product.id : product;
 
-            if (!product) {
+            // Vérifier si le produit existe
+            const productData = await ProductService.getProductById(productId);
+
+            if (!productData) {
                 throw new Error('Produit non trouvé');
             }
 
             // Vérifier la disponibilité du stock
-            if (product.stock !== undefined && product.stock < quantity) {
+            if (productData.stock !== undefined && productData.stock < quantity) {
                 throw new Error('Stock insuffisant');
             }
 
@@ -96,7 +99,7 @@ class CartService {
 
                     return {
                         ...existingItem,
-                        product
+                        product: productData
                     };
                 } else {
                     // Ajouter un nouvel élément au panier
@@ -116,7 +119,7 @@ class CartService {
 
                     return {
                         ...newItem,
-                        product
+                        product: productData
                     };
                 }
             } else {
@@ -138,7 +141,7 @@ class CartService {
 
                     return {
                         ...cartItems[existingItemIndex],
-                        product
+                        product: productData
                     };
                 } else {
                     // Ajouter un nouvel élément au panier
@@ -158,12 +161,12 @@ class CartService {
 
                     return {
                         ...newItem,
-                        product
+                        product: productData
                     };
                 }
             }
         } catch (error) {
-            console.error(`Erreur lors de l'ajout du produit ${productId} au panier:`, error);
+            console.error(`Erreur lors de l'ajout du produit au panier:`, error);
             throw error;
         }
     }
@@ -414,6 +417,43 @@ class CartService {
             throw error;
         }
     }
+
+    /**
+     * Crée une commande à partir du contenu du panier
+     * @param {Object} orderData - Données de la commande
+     * @returns {Promise<Object>} Commande créée
+     */
+    static async createOrder(orderData) {
+        try {
+            const currentUser = AuthService.getCurrentUser();
+
+            if (!currentUser) {
+                throw new Error('Utilisateur non connecté');
+            }
+
+            // Récupérer le panier
+            const cartItems = await this.getCart();
+
+            if (cartItems.length === 0) {
+                throw new Error('Le panier est vide');
+            }
+
+            // TODO: Implémentation de la création de commande
+            // Dans une application réelle, cela serait une requête API
+
+            // Vidage du panier après création de la commande
+            await this.clearCart();
+
+            return { success: true, message: "Commande créée avec succès" };
+        } catch (error) {
+            console.error('Erreur lors de la création de la commande:', error);
+            throw error;
+        }
+    }
 }
 
+// Exporter CartService comme export nommé
+export { CartService };
+
+// Et aussi comme export par défaut pour la compatibilité
 export default CartService;

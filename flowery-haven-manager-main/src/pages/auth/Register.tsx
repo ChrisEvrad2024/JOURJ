@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -18,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext"; // Import du contexte d'authentification
 
 // Define form schema
 const formSchema = z.object({
@@ -36,6 +36,7 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth(); // Utiliser le contexte d'authentification
 
   // Initialize form
   const form = useForm<z.infer<typeof formSchema>>({
@@ -54,25 +55,20 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      console.log("Registration data:", data);
+      // Utiliser le service d'authentification pour l'inscription
+      await register({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password
+      });
       
-      // For demo purposes, we'll just simulate a successful registration
-      setTimeout(() => {
-        // In a real app, you would handle registration here
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("user", JSON.stringify({ 
-          email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName
-        }));
-        
-        toast.success("Compte créé avec succès", {
-          description: "Bienvenue sur Floralie ! Votre compte a été créé.",
-        });
-        
-        navigate("/");
-      }, 1000);
+      toast.success("Compte créé avec succès", {
+        description: "Bienvenue sur Floralie ! Votre compte a été créé.",
+      });
+      
+      // Rediriger directement vers la page d'accueil (l'utilisateur est déjà connecté)
+      navigate("/");
     } catch (error) {
       console.error("Registration error:", error);
       toast.error("Échec de la création du compte", {

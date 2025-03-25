@@ -49,7 +49,13 @@ export const CartProvider = ({ children }) => {
   // Ajouter un produit au panier
   const addToCart = async (product, quantity = 1) => {
     try {
-      await CartService.addToCart(product, quantity);
+      // Vérification que product est un objet avec un ID
+      if (!product || !product.id) {
+        throw new Error('Produit invalide');
+      }
+      
+      // Utiliser directement l'ID du produit OU l'objet produit selon ce que CartService attend
+      await CartService.addToCart(product.id || product, quantity);
       
       // Mettre à jour l'état local
       const updatedCart = await CartService.getCart();
@@ -58,9 +64,12 @@ export const CartProvider = ({ children }) => {
       
       // Déclencher l'événement pour les autres composants
       window.dispatchEvent(new Event('cartUpdated'));
+      
+      return true;
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast.error('Erreur lors de l\'ajout au panier');
+      return false;
     }
   };
 
@@ -78,9 +87,12 @@ export const CartProvider = ({ children }) => {
       const updatedCart = await CartService.getCart();
       setCartItems(updatedCart);
       updateCartSummary(updatedCart);
+      
+      return true;
     } catch (error) {
       console.error('Error updating cart item:', error);
       toast.error('Erreur lors de la mise à jour du panier');
+      return false;
     }
   };
 
@@ -96,9 +108,12 @@ export const CartProvider = ({ children }) => {
       
       // Déclencher l'événement pour les autres composants
       window.dispatchEvent(new Event('cartUpdated'));
+      
+      return true;
     } catch (error) {
       console.error('Error removing from cart:', error);
       toast.error('Erreur lors de la suppression du panier');
+      return false;
     }
   };
 
@@ -113,9 +128,12 @@ export const CartProvider = ({ children }) => {
       
       // Déclencher l'événement pour les autres composants
       window.dispatchEvent(new Event('cartUpdated'));
+      
+      return true;
     } catch (error) {
       console.error('Error clearing cart:', error);
       toast.error('Erreur lors de la suppression du panier');
+      return false;
     }
   };
 

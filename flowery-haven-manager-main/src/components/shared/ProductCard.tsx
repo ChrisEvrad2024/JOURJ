@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Product } from '@/types/product';
@@ -42,11 +41,16 @@ const ProductCard = ({ product }: ProductCardProps) => {
         duration: 3000,
       });
     } else {
+      // Vérification que les images existent avant d'accéder à images[0]
+      const productImage = product.images && product.images.length > 0 
+        ? product.images[0] 
+        : '/placeholder.svg';
+        
       addToWishlist({
         id: product.id,
         name: product.name,
         price: product.price,
-        image: product.images[0]
+        image: productImage
       });
       setInWishlist(true);
       toast.success("Ajouté aux favoris", {
@@ -58,6 +62,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   const isInStock = product.stock === undefined || product.stock > 0;
 
+  // Récupérer l'image sécurisée
+  const productImage = product.images && product.images.length > 0 
+    ? product.images[0] 
+    : '/placeholder.svg';
+
   return (
     <div 
       className="product-card group"
@@ -67,9 +76,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
       <Link to={`/product/${product.id}`} className="block">
         <div className="product-image-wrapper rounded-lg overflow-hidden relative aspect-[3/4]">
           <img 
-            src={product.images[0]} 
+            src={productImage} 
             alt={product.name}
             className={`product-image w-full h-full object-cover transition-transform hover:scale-105 duration-700 ${!isInStock ? 'opacity-70' : ''}`}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/placeholder.svg';
+            }}
           />
           
           {/* Stock indicator */}
@@ -116,7 +128,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         
         <div className="mt-4 text-center">
           <h3 className="font-serif text-lg font-medium">{product.name}</h3>
-          <p className="mt-1 text-primary font-medium">{product.price.toFixed(2)} €</p>
+          <p className="mt-1 text-primary font-medium">{product.price?.toFixed(2) || "0.00"} €</p>
           {!isInStock && (
             <p className="text-xs text-red-500 mt-1">Rupture de stock</p>
           )}

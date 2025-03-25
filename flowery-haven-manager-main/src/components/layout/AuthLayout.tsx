@@ -28,7 +28,7 @@ const AuthLayout = ({ children, title, description, backLink }: AuthLayoutProps)
         </div>
         <div className="absolute inset-0 flex flex-col justify-between p-10 text-white">
           <div>
-            <Link to="/" className="text-2xl font-serif">Floralie</Link>
+            <Link to="/" className="text-2xl font-serif">ChezFLORA</Link>
           </div>
           <div>
             <h2 className="text-xl font-medium mb-2">Bienvenue dans notre boutique de fleurs</h2>
@@ -42,7 +42,7 @@ const AuthLayout = ({ children, title, description, backLink }: AuthLayoutProps)
         <div className="w-full max-w-md mx-auto space-y-6">
           {/* Mobile logo and back button */}
           <div className="md:hidden flex justify-between items-center mb-8">
-            <Link to="/" className="text-2xl font-serif">Floralie</Link>
+            <Link to="/" className="text-2xl font-serif">ChezFLORA</Link>
             {backLink && (
               <Link to={backLink.href} className="text-sm text-muted-foreground flex items-center gap-1">
                 <ArrowLeft size={14} />

@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useCart } from '@/hooks/useCart';
-import { useWishlist } from '@/hooks/useWishlist.tjs';
+import { useWishlist } from '@/hooks/useWishlist'; // Correction de l'extension
 
 // Mock color options for demonstration
 const COLORS = [
@@ -25,6 +25,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isLinkCopied, setIsLinkCopied] = useState(false);
@@ -41,14 +42,20 @@ const ProductDetail = () => {
       // Reset scroll position when navigating to a new product
       window.scrollTo(0, 0);
 
-      if (!id) return;
+      if (!id) {
+        setError("ID du produit manquant");
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
+        setError(null);
         
         // Récupérer le produit
         const productData = await ProductService.getProductById(id);
         if (!productData) {
+          setError("Produit non trouvé");
           setLoading(false);
           return;
         }
@@ -58,18 +65,21 @@ const ProductDetail = () => {
         setSelectedImage(0);
         setSelectedColor(COLORS[0]);
         
-        // Ajouter aux produits récemment vus
-        await ProductService.addToRecentlyViewed(productData);
-        
         // Récupérer les produits récemment vus (exclure le produit actuel)
-        const viewedProducts = await ProductService.getRecentlyViewed();
+        const viewedProducts = ProductService.getRecentlyViewedProducts();
         setRecentlyViewed(viewedProducts.filter(item => item.id !== id));
         
         // Récupérer les produits liés (même catégorie)
-        const categoryProducts = await ProductService.getProductsByCategory(productData.category);
-        setRelatedProducts(categoryProducts.filter(p => p.id !== id).slice(0, 4));
+        try {
+          const categoryProducts = await ProductService.getProductsByCategory(productData.category);
+          setRelatedProducts(categoryProducts.filter(p => p.id !== id).slice(0, 4));
+        } catch (categoryError) {
+          console.error('Error fetching related products:', categoryError);
+          setRelatedProducts([]);
+        }
       } catch (error) {
         console.error('Error fetching product:', error);
+        setError("Erreur lors du chargement du produit");
       } finally {
         setLoading(false);
       }
@@ -83,8 +93,9 @@ const ProductDetail = () => {
       <>
         <Navbar />
         <main className="pt-32 pb-16 min-h-screen">
-          <div className="section-container text-center">
-            <div className="animate-pulse">
+          <div className="container mx-auto px-4 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
               <p>Chargement du produit...</p>
             </div>
           </div>
@@ -94,14 +105,14 @@ const ProductDetail = () => {
     );
   }
   
-  if (!product) {
+  if (error || !product) {
     return (
       <>
         <Navbar />
         <main className="pt-32 pb-16 min-h-screen">
-          <div className="section-container text-center">
+          <div className="container mx-auto px-4 text-center">
             <h1 className="text-2xl font-serif mb-4">Produit non trouvé</h1>
-            <p className="mb-8">Le produit que vous recherchez n'existe pas ou a été retiré.</p>
+            <p className="mb-8">{error || "Le produit que vous recherchez n'existe pas ou a été retiré."}</p>
             <Link to="/catalog" className="btn-primary inline-flex">
               Retour à la boutique
             </Link>
@@ -136,11 +147,13 @@ const ProductDetail = () => {
   
   const handleAddToCart = () => {
     if (product && isInStock) {
-      addToCart(product, quantity);
-      toast.success("Ajouté au panier", {
-        description: `${product.name} (${quantity}) a été ajouté à votre panier.`,
-        duration: 3000,
-      });
+      const success = addToCart(product, quantity);
+      if (success !== false) {
+        toast.success("Ajouté au panier", {
+          description: `${product.name} (${quantity}) a été ajouté à votre panier.`,
+          duration: 3000,
+        });
+      }
     } else {
       toast.error("Produit en rupture de stock", {
         description: "Ce produit n'est actuellement pas disponible.",
@@ -180,7 +193,7 @@ const ProductDetail = () => {
   
   const shareToSocial = (platform: 'facebook' | 'twitter' | 'linkedin') => {
     const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent(`Découvrez ${product.name} - Flora Express`);
+    const text = encodeURIComponent(`Découvrez ${product.name} - ChezFlora`);
     
     let shareUrl = '';
     
@@ -203,7 +216,7 @@ const ProductDetail = () => {
     <>
       <Navbar />
       <main className="pt-32 pb-16">
-        <div className="section-container">
+        <div className="container mx-auto px-4">
           {/* Back button */}
           <button 
             onClick={() => navigate(-1)}
@@ -216,14 +229,23 @@ const ProductDetail = () => {
             {/* Product Images */}
             <div className="space-y-4">
               <div className="aspect-square overflow-hidden rounded-lg bg-muted">
-                <img 
-                  src={product.images[selectedImage]} 
-                  alt={product.name}
-                  className={`w-full h-full object-cover animate-fade-in ${!isInStock ? 'opacity-70' : ''}`}
-                />
+                {product.images && product.images.length > 0 ? (
+                  <img 
+                    src={product.images[selectedImage]} 
+                    alt={product.name}
+                    className={`w-full h-full object-cover animate-fade-in ${!isInStock ? 'opacity-70' : ''}`}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://placehold.co/600x600/f9fafb/a1a1a9?text=Image+non+disponible';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <p className="text-gray-400">Image non disponible</p>
+                  </div>
+                )}
               </div>
               
-              {product.images.length > 1 && (
+              {product.images && product.images.length > 1 && (
                 <div className="flex gap-4 flex-wrap">
                   {product.images.map((image: string, index: number) => (
                     <button
@@ -235,8 +257,11 @@ const ProductDetail = () => {
                     >
                       <img 
                         src={image} 
-                        alt={`${product.name} - view ${index + 1}`}
+                        alt={`${product.name} - vue ${index + 1}`}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/600x600/f9fafb/a1a1a9?text=Image+non+disponible';
+                        }}
                       />
                     </button>
                   ))}
@@ -267,7 +292,7 @@ const ProductDetail = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-2xl text-primary font-medium">{product.price.toFixed(2)} €</p>
+                <p className="text-2xl text-primary font-medium">{product.price?.toFixed(2)} €</p>
                 
                 {/* SKU */}
                 {product.sku && (
@@ -450,22 +475,16 @@ const ProductDetail = () => {
           )}
           
           {/* You may also like */}
-          <div className="mt-24">
-            <h2 className="text-2xl font-serif mb-8">Vous pourriez aussi aimer</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.length > 0 ? (
-                // Si des produits liés sont disponibles, les utiliser
-                relatedProducts.slice(0, 4).filter(p => p.id !== product.id).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))
-              ) : (
-                // Sinon, charger des produits populaires
-                <p className="col-span-4 text-center text-muted-foreground">
-                  Chargement des suggestions...
+          {relatedProducts.length === 0 && recentlyViewed.length === 0 && (
+            <div className="mt-24">
+              <h2 className="text-2xl font-serif mb-8">Vous pourriez aussi aimer</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <p className="col-span-4 text-center text-muted-foreground py-12">
+                  Aucune suggestion disponible pour le moment
                 </p>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
       <Footer />

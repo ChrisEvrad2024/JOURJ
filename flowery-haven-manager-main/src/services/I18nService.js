@@ -67,7 +67,7 @@ class I18nService {
         const translations = {
             'fr-FR': {
                 common: {
-                    welcome: 'Bienvenue chez Floralie',
+                    welcome: 'Bienvenue chez ChezFLORA',
                     cart: 'Panier',
                     login: 'Connexion',
                     logout: 'Déconnexion',
@@ -88,7 +88,7 @@ class I18nService {
             },
             'en-US': {
                 common: {
-                    welcome: 'Welcome to Floralie',
+                    welcome: 'Welcome to ChezFLORA',
                     cart: 'Cart',
                     login: 'Login',
                     logout: 'Logout',
@@ -109,7 +109,7 @@ class I18nService {
             },
             'es-ES': {
                 common: {
-                    welcome: 'Bienvenido a Floralie',
+                    welcome: 'Bienvenido a ChezFLORA',
                     cart: 'Carrito',
                     login: 'Iniciar sesión',
                     logout: 'Cerrar sesión',
@@ -130,7 +130,7 @@ class I18nService {
             },
             'de-DE': {
                 common: {
-                    welcome: 'Willkommen bei Floralie',
+                    welcome: 'Willkommen bei ChezFLORA',
                     cart: 'Warenkorb',
                     login: 'Anmelden',
                     logout: 'Abmelden',

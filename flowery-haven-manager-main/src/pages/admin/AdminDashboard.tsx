@@ -111,7 +111,7 @@ const AdminDashboard = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Tableau de bord</h1>
-        <p className="text-muted-foreground">Bienvenue sur le tableau de bord de votre boutique Floralie.</p>
+        <p className="text-muted-foreground">Bienvenue sur le tableau de bord de votre boutique ChezFLORA.</p>
       </div>
       
       <Tabs defaultValue="general" className="space-y-4">

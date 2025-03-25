@@ -1,5 +1,5 @@
 // src/App.tsx (mise à jour avec lazy loading)
-import { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,7 +11,6 @@ import { WishlistProvider } from './contexts/WishlistContext';
 import { I18nProvider } from './contexts/I18nContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AppInitializationService } from './services';
-import PreloadService from './services/PreloadService';
 import OfflineIndicator from './components/common/OfflineIndicator';
 import { Progress } from "@/components/ui/progress";
 
@@ -20,7 +19,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/auth/Login";
 
-// Loading Fallback Component
+// Loading Fallback Component with better error handling
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center">
     <div className="text-center">
@@ -30,29 +29,96 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Lazy-load des composants non critiques
-const Catalog = lazy(() => import('./pages/Catalog'));
-const ProductDetail = lazy(() => import('./pages/ProductDetail'));
-const Cart = lazy(() => import('./pages/Cart'));
-const Wishlist = lazy(() => import('./pages/Wishlist'));
-const Register = lazy(() => import('./pages/auth/Register'));
-const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
-const AccountLayout = lazy(() => import('./components/layout/AccountLayout'));
-const MyAccount = lazy(() => import('./pages/account/MyAccount'));
-const ProfileSettings = lazy(() => import('./pages/account/ProfileSettings'));
-const OrderHistory = lazy(() => import('./pages/account/OrderHistory'));
-const Addresses = lazy(() => import('./pages/account/Addresses'));
-const AdminLayout = lazy(() => import('./components/layout/AdminLayout'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const ProductsManagement = lazy(() => import('./pages/admin/ProductsManagement'));
-const BlogManagement = lazy(() => import('./pages/admin/BlogManagement'));
-const CustomersManagement = lazy(() => import('./pages/admin/CustomersManagement'));
-const Blog = lazy(() => import('./pages/Blog'));
-const BlogPost = lazy(() => import('./pages/BlogPost'));
-const Contact = lazy(() => import('./pages/Contact'));
-const About = lazy(() => import('./pages/About'));
+// Error Fallback Component
+const ErrorFallback = ({ error }) => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center max-w-md mx-auto p-6 bg-red-50 rounded-lg border border-red-200">
+      <h2 className="text-xl font-semibold text-red-700 mb-2">
+        Une erreur est survenue
+      </h2>
+      <p className="text-red-600 mb-4">
+        Nous n'avons pas pu charger cette page. Veuillez réessayer.
+      </p>
+      <pre className="text-sm bg-white p-3 rounded border text-left overflow-auto max-h-32">
+        {error?.message || "Erreur inconnue"}
+      </pre>
+      <button
+        onClick={() => window.location.reload()}
+        className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
+      >
+        Recharger la page
+      </button>
+    </div>
+  </div>
+);
 
-const queryClient = new QueryClient();
+// Wrapper pour gérer les erreurs
+class ErrorBoundaryWrapper extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error caught by error boundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback error={this.state.error} />;
+    }
+    return this.props.children;
+  }
+}
+
+// Lazy-load des composants avec gestion d'erreur
+const lazyWithErrorHandling = (importFunc) => {
+  const LazyComponent = lazy(importFunc);
+  return (props) => (
+    <Suspense fallback={<LoadingFallback />}>
+      <ErrorBoundaryWrapper>
+        <LazyComponent {...props} />
+      </ErrorBoundaryWrapper>
+    </Suspense>
+  );
+};
+
+// Lazy-load des composants non critiques avec gestion d'erreur
+const Catalog = lazyWithErrorHandling(() => import('./pages/Catalog'));
+const ProductDetail = lazyWithErrorHandling(() => import('./pages/ProductDetail'));
+const Cart = lazyWithErrorHandling(() => import('./pages/Cart'));
+const Wishlist = lazyWithErrorHandling(() => import('./pages/Wishlist'));
+const Register = lazyWithErrorHandling(() => import('./pages/auth/Register'));
+const ForgotPassword = lazyWithErrorHandling(() => import('./pages/auth/ForgotPassword'));
+const AccountLayout = lazyWithErrorHandling(() => import('./components/layout/AccountLayout'));
+const MyAccount = lazyWithErrorHandling(() => import('./pages/account/MyAccount'));
+const ProfileSettings = lazyWithErrorHandling(() => import('./pages/account/ProfileSettings'));
+const OrderHistory = lazyWithErrorHandling(() => import('./pages/account/OrderHistory'));
+const Addresses = lazyWithErrorHandling(() => import('./pages/account/Addresses'));
+const AdminLayout = lazyWithErrorHandling(() => import('./components/layout/AdminLayout'));
+const AdminDashboard = lazyWithErrorHandling(() => import('./pages/admin/AdminDashboard'));
+const ProductsManagement = lazyWithErrorHandling(() => import('./pages/admin/ProductsManagement'));
+const BlogManagement = lazyWithErrorHandling(() => import('./pages/admin/BlogManagement'));
+const CustomersManagement = lazyWithErrorHandling(() => import('./pages/admin/CustomersManagement'));
+const Blog = lazyWithErrorHandling(() => import('./pages/Blog'));
+const BlogPost = lazyWithErrorHandling(() => import('./pages/BlogPost'));
+const Contact = lazyWithErrorHandling(() => import('./pages/Contact'));
+const About = lazyWithErrorHandling(() => import('./pages/About'));
+// Ajoutons l'import de la page de devis
+const Quote = lazyWithErrorHandling(() => import('./pages/Quote'));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const LoadingScreen = ({ progress, status }) => (
   <div className="min-h-screen flex flex-col items-center justify-center p-8">
@@ -162,55 +228,54 @@ const App = () => {
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
-                  <Suspense fallback={<LoadingFallback />}>
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/catalog" element={<Catalog />} />
-                      <Route path="/product/:id" element={<ProductDetail />} />
-                      <Route path="/cart" element={<Cart />} />
-                      <Route path="/wishlist" element={<Wishlist />} />
-                      <Route path="/blog" element={<Blog />} />
-                      <Route path="/blog/:id" element={<BlogPost />} />
-                      <Route path="/contact" element={<Contact />} />
-                      <Route path="/about" element={<About />} />
-                      
-                      {/* Auth Routes */}
-                      <Route path="/auth/login" element={<Login />} />
-                      <Route path="/auth/register" element={<Register />} />
-                      <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-                      
-                      {/* Account Routes - Protégées */}
-                      <Route path="/account" element={
-                        <ProtectedRoute>
-                          <AccountLayout />
-                        </ProtectedRoute>
-                      }>
-                        <Route index element={<MyAccount />} />
-                        <Route path="profile" element={<ProfileSettings />} />
-                        <Route path="orders" element={<OrderHistory />} />
-                        <Route path="addresses" element={<Addresses />} />
-                      </Route>
-                      
-                      {/* Admin Routes - Protégées + exigence admin */}
-                      <Route path="/admin" element={
-                        <ProtectedRoute requireAdmin={true}>
-                          <AdminLayout />
-                        </ProtectedRoute>
-                      }>
-                        <Route index element={<AdminDashboard />} />
-                        <Route path="products" element={<ProductsManagement />} />
-                        <Route path="blog" element={<BlogManagement />} />
-                        <Route path="customers" element={<CustomersManagement />} />
-                        {/* Ces routes seront implémentées plus tard */}
-                        <Route path="orders" element={<div className="p-4">Gestion des commandes (à implémenter)</div>} />
-                        <Route path="analytics" element={<div className="p-4">Statistiques (à implémenter)</div>} />
-                        <Route path="settings" element={<div className="p-4">Paramètres (à implémenter)</div>} />
-                      </Route>
-                      
-                      {/* Route 404 */}
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/catalog" element={<Catalog />} />
+                    <Route path="/product/:id" element={<ProductDetail />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/wishlist" element={<Wishlist />} />
+                    <Route path="/blog" element={<Blog />} />
+                    <Route path="/blog/:id" element={<BlogPost />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/quote" element={<Quote />} />
+                    
+                    {/* Auth Routes */}
+                    <Route path="/auth/login" element={<Login />} />
+                    <Route path="/auth/register" element={<Register />} />
+                    <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+                    
+                    {/* Account Routes - Protégées */}
+                    <Route path="/account" element={
+                      <ProtectedRoute>
+                        <AccountLayout />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<MyAccount />} />
+                      <Route path="profile" element={<ProfileSettings />} />
+                      <Route path="orders" element={<OrderHistory />} />
+                      <Route path="addresses" element={<Addresses />} />
+                    </Route>
+                    
+                    {/* Admin Routes - Protégées + exigence admin */}
+                    <Route path="/admin" element={
+                      <ProtectedRoute requireAdmin={true}>
+                        <AdminLayout />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="products" element={<ProductsManagement />} />
+                      <Route path="blog" element={<BlogManagement />} />
+                      <Route path="customers" element={<CustomersManagement />} />
+                      {/* Ces routes seront implémentées plus tard */}
+                      <Route path="orders" element={<div className="p-4">Gestion des commandes (à implémenter)</div>} />
+                      <Route path="analytics" element={<div className="p-4">Statistiques (à implémenter)</div>} />
+                      <Route path="settings" element={<div className="p-4">Paramètres (à implémenter)</div>} />
+                    </Route>
+                    
+                    {/* Route 404 */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
                   <OfflineIndicator />
                 </BrowserRouter>
               </TooltipProvider>

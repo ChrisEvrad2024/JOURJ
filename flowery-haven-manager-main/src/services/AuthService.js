@@ -95,45 +95,41 @@ class AuthService {
      * @param {string} userData.password - Mot de passe
      * @returns {Promise<Object>} Informations de l'utilisateur inscrit
      */
-    generateUserId() {
-        return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-    async register(userData) {
+    static async register(userData) {
         try {
             // Vérifier si l'utilisateur existe déjà
-            const existingUser = await this.getUserByEmail(userData.email);
-            if (existingUser) {
+            const users = await DbService.getByIndex(STORES.USERS, 'email', userData.email.toLowerCase());
+            
+            if (users.length > 0) {
                 throw new Error('Un utilisateur avec cette adresse email existe déjà');
             }
 
-            // Ajouter l'utilisateur à la base de données
-            await DbService.add('users', {
-                email: userData.email.toLowerCase(), // Stocker en minuscules pour faciliter la recherche
-                password: userData.password, // Idéalement, hashé dans une vraie application
-                firstName: userData.firstName,
-                lastName: userData.lastName,
-                role: 'customer',
-                createdAt: new Date()
-            });
-
             // Créer un nouvel utilisateur
             const newUser = {
-                id: this.generateUserId(),
-                ...userData,
+                id: uuidv4(),
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                email: userData.email.toLowerCase(), // Stocker en minuscules pour faciliter la recherche
+                password: userData.password, // Idéalement, hashé dans une vraie application
                 role: 'customer',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
 
-            // Stocker l'utilisateur
-            const users = await this.getAllUsers();
-            users.push(newUser);
-            localStorage.setItem('users', JSON.stringify(users));
+            // Ajouter l'utilisateur à la base de données
+            await DbService.add(STORES.USERS, newUser);
 
-            // Connecter automatiquement l'utilisateur
-            this.setCurrentUser(newUser);
+            // Connecter automatiquement l'utilisateur en créant un token et en stockant ses informations
+            const authToken = this._generateAuthToken(newUser.id);
+            
+            // Nettoyer l'objet utilisateur avant de le stocker (retirer le mot de passe)
+            const userToStore = { ...newUser };
+            delete userToStore.password;
+            
+            StorageService.setLocalStorageItem(STORAGE_KEYS.CURRENT_USER, userToStore);
+            StorageService.setLocalStorageItem(STORAGE_KEYS.AUTH_TOKEN, authToken);
 
-            return newUser;
+            return userToStore;
         } catch (error) {
             console.error('Erreur lors de l\'inscription:', error);
             throw error;
@@ -232,126 +228,52 @@ class AuthService {
     }
 
     /**
-     * Initie le processus de réinitialisation de mot de passe
-     * @param {string} email - Email de l'utilisateur
-     * @returns {Promise<boolean>} Succès de l'opération
-     */
-    static async requestPasswordReset(email) {
-        try {
-            // Vérifier si l'utilisateur existe
-            const users = await DbService.getByIndex(STORES.USERS, 'email', email);
-
-            if (users.length === 0) {
-                // Ne pas révéler si l'email existe ou non pour des raisons de sécurité
-                // Retourner un succès même si l'email n'existe pas
-                return true;
-            }
-
-            const user = users[0];
-
-            // Générer un token de réinitialisation
-            const resetToken = uuidv4();
-            const resetExpires = new Date();
-            resetExpires.setHours(resetExpires.getHours() + 1); // Expire après 1 heure
-
-            // Mettre à jour l'utilisateur avec le token
-            user.resetPasswordToken = resetToken;
-            user.resetPasswordExpires = resetExpires.toISOString();
-            user.updatedAt = new Date().toISOString();
-
-            await DbService.update(STORES.USERS, user);
-
-            // Dans une application réelle, on enverrait un email avec le lien de réinitialisation
-            console.log(`Token de réinitialisation pour ${email}: ${resetToken}`);
-
-            return true;
-        } catch (error) {
-            console.error('Erreur lors de la demande de réinitialisation:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Réinitialise le mot de passe avec un token
-     * @param {string} token - Token de réinitialisation
-     * @param {string} newPassword - Nouveau mot de passe
-     * @returns {Promise<boolean>} Succès de l'opération
-     */
-    static async resetPassword(token, newPassword) {
-        try {
-            // Dans une application réelle, on aurait une méthode pour rechercher par token
-            // Ici, on parcourt tous les utilisateurs pour simplifier
-            const allUsers = await DbService.getAll(STORES.USERS);
-            const user = allUsers.find(u => u.resetPasswordToken === token);
-
-            if (!user) {
-                throw new Error('Token de réinitialisation invalide');
-            }
-
-            // Vérifier si le token est expiré
-            const expires = new Date(user.resetPasswordExpires);
-            if (expires < new Date()) {
-                throw new Error('Token de réinitialisation expiré');
-            }
-
-            // Mettre à jour le mot de passe
-            user.password = newPassword;
-            user.resetPasswordToken = null;
-            user.resetPasswordExpires = null;
-            user.updatedAt = new Date().toISOString();
-
-            await DbService.update(STORES.USERS, user);
-            return true;
-        } catch (error) {
-            console.error('Erreur lors de la réinitialisation du mot de passe:', error);
-            throw error;
-        }
-    }
-
-    /**
      * Récupère tous les utilisateurs (admin seulement)
      * @returns {Promise<Array>} Liste des utilisateurs
      */
-    // Méthode pour récupérer tous les utilisateurs
-    async getAllUsers() {
+    static async getAllUsers() {
         try {
-            const users = localStorage.getItem('users');
-            return users ? JSON.parse(users) : [];
+            const currentUser = this.getCurrentUser();
+
+            if (!currentUser || currentUser.role !== 'admin') {
+                throw new Error('Accès non autorisé');
+            }
+
+            const users = await DbService.getAll(STORES.USERS);
+
+            // Retourner les utilisateurs sans les mots de passe
+            return users.map(user => {
+                const userWithoutPassword = { ...user };
+                delete userWithoutPassword.password;
+                return userWithoutPassword;
+            });
         } catch (error) {
             console.error('Erreur lors de la récupération des utilisateurs:', error);
-            return [];
+            throw error;
         }
     }
 
     /**
-     * Supprime un utilisateur (admin ou utilisateur lui-même)
-     * @param {string} userId - ID de l'utilisateur à supprimer
-     * @returns {Promise<boolean>} Succès de l'opération
+     * Récupère un utilisateur par son email
+     * @param {string} email - Email de l'utilisateur
+     * @returns {Promise<Object|null>} Utilisateur ou null si non trouvé
+     * @private
      */
-    static async deleteUser(userId) {
+    static async getUserByEmail(email) {
         try {
-            // Vérifier les permissions
-            const currentUser = this.getCurrentUser();
-            if (!currentUser) {
-                throw new Error('Utilisateur non connecté');
+            const users = await DbService.getByIndex(STORES.USERS, 'email', email.toLowerCase());
+            
+            if (users.length === 0) {
+                return null;
             }
-
-            if (currentUser.id !== userId && currentUser.role !== 'admin') {
-                throw new Error('Accès non autorisé');
-            }
-
-            // Supprimer l'utilisateur
-            await DbService.delete(STORES.USERS, userId);
-
-            // Si l'utilisateur supprime son propre compte, déconnecter
-            if (currentUser.id === userId) {
-                this.logout();
-            }
-
-            return true;
+            
+            // Retourner l'utilisateur sans le mot de passe
+            const user = { ...users[0] };
+            delete user.password;
+            return user;
         } catch (error) {
-            console.error('Erreur lors de la suppression de l\'utilisateur:', error);
-            throw error;
+            console.error('Erreur lors de la récupération de l\'utilisateur par email:', error);
+            return null;
         }
     }
 

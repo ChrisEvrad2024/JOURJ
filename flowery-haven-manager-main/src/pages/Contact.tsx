@@ -99,7 +99,7 @@ const ContactPage = () => {
                 </div>
                 <div>
                   <h3 className="font-medium mb-1">Email</h3>
-                  <p className="text-muted-foreground">contact@floralie.fr</p>
+                  <p className="text-muted-foreground">contact@ChezFLORA.fr</p>
                 </div>
               </div>
               

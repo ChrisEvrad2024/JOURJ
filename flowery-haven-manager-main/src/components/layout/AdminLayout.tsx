@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { 
@@ -11,7 +10,9 @@ import {
   BarChart3,
   LogOut,
   Menu,
-  AlertCircle
+  AlertCircle,
+  Home,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -34,6 +35,11 @@ const AdminLayout = () => {
   // Logout handler
   const handleLogout = () => {
     toast.success("Déconnexion réussie");
+    navigate("/");
+  };
+
+  // Back to site handler
+  const handleBackToSite = () => {
     navigate("/");
   };
 
@@ -79,7 +85,7 @@ const AdminLayout = () => {
   const Sidebar = () => (
     <div className="space-y-1">
       <div className="px-3 py-4">
-        <h2 className="text-lg font-semibold mb-1">Admin Floralie</h2>
+        <h2 className="text-lg font-semibold mb-1">Admin ChezFlora</h2>
         <p className="text-sm text-muted-foreground">Gérez votre boutique</p>
       </div>
       
@@ -100,9 +106,20 @@ const AdminLayout = () => {
           </Link>
         ))}
         <Separator className="my-2" />
+        
+        {/* Bouton Retour au site */}
+        <Button 
+          variant="outline" 
+          className="flex items-center gap-3 px-3 py-2 rounded-md w-full transition-colors justify-start font-normal"
+          onClick={handleBackToSite}
+        >
+          <Home size={18} />
+          <span>Retour au site</span>
+        </Button>
+        
         <Button 
           variant="ghost" 
-          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-destructive/10 w-full transition-colors text-destructive justify-start font-normal"
+          className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-destructive/10 w-full transition-colors text-destructive justify-start font-normal mt-2"
           onClick={handleLogout}
         >
           <LogOut size={18} />
@@ -133,12 +150,32 @@ const AdminLayout = () => {
           <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(true)}>
             <Menu size={20} />
           </Button>
-          <h1 className="font-semibold">Admin Floralie</h1>
-          <div className="w-10"></div> {/* For balance */}
+          <h1 className="font-semibold">Admin ChezFlora</h1>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleBackToSite}
+            title="Retour au site"
+          >
+            <Home size={20} />
+          </Button>
         </header>
         
         {/* Content */}
         <main className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              {/* Le titre sera ajouté par chaque page */}
+            </div>
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={handleBackToSite}
+            >
+              <ArrowLeft size={16} />
+              Retour au site
+            </Button>
+          </div>
           <Outlet />
         </main>
       </div>

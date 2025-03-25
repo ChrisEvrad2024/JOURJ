@@ -154,19 +154,22 @@
 // export default useWishlist;
 
 // Stub pour useWishlist
+import { useContext } from 'react';
+import { WishlistContext } from '../contexts/WishlistContext';
+
+/**
+ * Hook personnalisé pour accéder au contexte de la liste de souhaits
+ * @returns {Object} Fonctions et données de la liste de souhaits
+ */
 export const useWishlist = () => {
-    return {
-        wishlist: [],
-        loading: false,
-        error: null,
-        itemCount: 0,
-        isInWishlist: (productId) => false,
-        addToWishlist: (product) => console.log('addToWishlist called', product),
-        removeFromWishlist: (productId) => console.log('removeFromWishlist called', productId),
-        clearWishlist: () => console.log('clearWishlist called'),
-        toggleWishlist: (productId) => console.log('toggleWishlist called', productId),
-        refreshWishlist: () => console.log('refreshWishlist called')
-    };
+    const context = useContext(WishlistContext);
+
+    if (context === undefined) {
+        throw new Error('useWishlist must be used within a WishlistProvider');
+    }
+
+    return context;
 };
 
+// Export par défaut pour compatibilité
 export default useWishlist;
