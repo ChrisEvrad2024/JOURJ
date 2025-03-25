@@ -145,12 +145,12 @@ const Login = () => {
         </p>
       </div>
       
-      <div className="mt-8 p-4 bg-muted rounded-md">
+      {/* <div className="mt-8 p-4 bg-muted rounded-md">
         <p className="text-sm text-center font-medium">Accès administrateur</p>
         <p className="text-xs text-center text-muted-foreground mt-1">
           Utilisez admin@admin.com avec n'importe quel mot de passe pour accéder à l'interface d'administration.
         </p>
-      </div>
+      </div> */}
     </AuthLayout>
   );
 };
