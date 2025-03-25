@@ -19,4 +19,8 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  base: '/', // Force le chemin absolu
+  build: {
+    outDir: 'build' // Rend explicite le dossier de build
+  }
 }));
