@@ -67,7 +67,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 
-// Status mapping for displaying appropriate UI
 const statusConfig = {
   pending: {
     label: "En attente",
@@ -106,7 +105,6 @@ const statusConfig = {
   }
 };
 
-// Quote types mapping
 const quoteTypeConfig = {
   event: {
     label: "Événement",
@@ -125,83 +123,68 @@ const quoteTypeConfig = {
     color: "bg-orange-100 text-orange-800"
   }
 };
-const AdminQuotesManagement = () => {
-    const [quotes, setQuotes] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
-    const [typeFilter, setTypeFilter] = useState("all");
-    const [selectedQuote, setSelectedQuote] = useState(null);
-    const [showQuoteDetails, setShowQuoteDetails] = useState(false);
-    const [showUpdateStatus, setShowUpdateStatus] = useState(false);
-    const [newStatus, setNewStatus] = useState("");
-    const [statusNote, setStatusNote] = useState("");
-    const [showCreateProposal, setShowCreateProposal] = useState(false);
-    
-    // Proposal form fields
-    const [proposalAmount, setProposalAmount] = useState("");
-    const [proposalDescription, setProposalDescription] = useState("");
-    const [proposalItems, setProposalItems] = useState([{ name: "", quantity: 1, price: "" }]);
-    const [proposalValidUntil, setProposalValidUntil] = useState(
-      new Date(new Date().setDate(new Date().getDate() + 14)) // Default: 14 days from now
-    );
-    const [proposalTerms, setProposalTerms] = useState(
-      "Ce devis est valable jusqu'à la date d'expiration indiquée. Les prix sont en euros (€) et incluent la TVA."
-    );
-    
-    // Load quotes
-    useEffect(() => {
-      const fetchQuotes = async () => {
-        try {
-          setLoading(true);
-          
-          // Apply filters
-          const filters = {};
-          if (statusFilter !== "all") filters.status = statusFilter;
-          if (typeFilter !== "all") filters.type = typeFilter;
-          
-          const allQuotes = await QuoteService.getAllQuotes(filters);
-          setQuotes(allQuotes);
-        } catch (error) {
-          console.error("Error fetching quotes:", error);
-          toast.error("Erreur lors du chargement des devis");
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      fetchQuotes();
-    }, [statusFilter, typeFilter]);
-  
-    // Filter quotes by search query
-    const filteredQuotes = quotes.filter(quote => {
-      if (!searchQuery) return true;
-      const query = searchQuery.toLowerCase();
-      
-      // Search by quote id, customer name, contact info, type
-      return (
-        (quote.id && quote.id.toString().toLowerCase().includes(query)) ||
-        (quote.contactName && quote.contactName.toLowerCase().includes(query)) ||
-        (quote.contactEmail && quote.contactEmail.toLowerCase().includes(query)) ||
-        (quote.contactPhone && quote.contactPhone.toLowerCase().includes(query)) ||
-        (quote.type && quote.type.toLowerCase().includes(query)) ||
-        (quote.title && quote.title.toLowerCase().includes(query))
-      );
-    });
-  
-    // Format date helper
-    const formatDate = (dateString) => {
-      if (!dateString) return "N/A";
-      return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
-    };
 
-    // View quote details
+const AdminQuotesManagement = () => {
+  const [quotes, setQuotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [showQuoteDetails, setShowQuoteDetails] = useState(false);
+  const [showUpdateStatus, setShowUpdateStatus] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
+  const [statusNote, setStatusNote] = useState("");
+  const [showCreateProposal, setShowCreateProposal] = useState(false);
+  const [proposalAmount, setProposalAmount] = useState("");
+  const [proposalDescription, setProposalDescription] = useState("");
+  const [proposalItems, setProposalItems] = useState([{ name: "", quantity: 1, price: "" }]);
+  const [proposalValidUntil, setProposalValidUntil] = useState(new Date(new Date().setDate(new Date().getDate() + 14)));
+  const [proposalTerms, setProposalTerms] = useState("Ce devis est valable jusqu'à la date d'expiration indiquée. Les prix sont en euros (€) et incluent la TVA.");
+
+  useEffect(() => {
+    const fetchQuotes = async () => {
+      try {
+        setLoading(true);
+        const filters = {};
+        if (statusFilter !== "all") filters.status = statusFilter;
+        if (typeFilter !== "all") filters.type = typeFilter;
+        
+        const allQuotes = await QuoteService.getAllQuotes(filters);
+        setQuotes(allQuotes);
+      } catch (error) {
+        console.error("Error fetching quotes:", error);
+        toast.error("Erreur lors du chargement des devis");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuotes();
+  }, [statusFilter, typeFilter]);
+
+  const filteredQuotes = quotes.filter(quote => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      (quote.id && quote.id.toString().toLowerCase().includes(query)) ||
+      (quote.contactName?.toLowerCase().includes(query)) ||
+      (quote.contactEmail?.toLowerCase().includes(query)) ||
+      (quote.contactPhone?.toLowerCase().includes(query)) ||
+      (quote.type?.toLowerCase().includes(query)) ||
+      (quote.title?.toLowerCase().includes(query))
+    );
+  });
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
+  };
+
   const handleViewQuote = (quote) => {
     setSelectedQuote(quote);
     setShowQuoteDetails(true);
   };
 
-  // Open update status dialog
   const handleUpdateStatusClick = (quote) => {
     setSelectedQuote(quote);
     setNewStatus(quote.status);
@@ -209,40 +192,32 @@ const AdminQuotesManagement = () => {
     setShowUpdateStatus(true);
   };
 
-  // Create proposal
   const handleCreateProposalClick = (quote) => {
     setSelectedQuote(quote);
-    
-    // Initialize with default values
     setProposalAmount("");
     setProposalDescription(`Devis pour ${quote.title || 'votre projet'}`);
     setProposalItems([{ name: "", quantity: 1, price: "" }]);
     setProposalValidUntil(new Date(new Date().setDate(new Date().getDate() + 14)));
     setProposalTerms("Ce devis est valable jusqu'à la date d'expiration indiquée. Les prix sont en euros (€) et incluent la TVA.");
-    
     setShowCreateProposal(true);
   };
 
-  // Add item to proposal
   const handleAddItem = () => {
     setProposalItems([...proposalItems, { name: "", quantity: 1, price: "" }]);
   };
 
-  // Remove item from proposal
   const handleRemoveItem = (index) => {
     const newItems = [...proposalItems];
     newItems.splice(index, 1);
     setProposalItems(newItems);
   };
 
-  // Update item in proposal
   const handleUpdateItem = (index, field, value) => {
     const newItems = [...proposalItems];
     newItems[index][field] = value;
     setProposalItems(newItems);
   };
 
-  // Calculate proposal total
   const calculateTotal = () => {
     return proposalItems.reduce((total, item) => {
       const price = parseFloat(item.price) || 0;
@@ -251,21 +226,16 @@ const AdminQuotesManagement = () => {
     }, 0);
   };
 
-  // Submit proposal
   const handleSubmitProposal = async () => {
     if (!selectedQuote) return;
     
     try {
-      // Validate form
       if (!proposalDescription || proposalItems.some(item => !item.name || !item.price)) {
         toast.error("Veuillez remplir tous les champs obligatoires");
         return;
       }
       
-      // Calculate total if amount not manually set
       const total = proposalAmount ? parseFloat(proposalAmount) : calculateTotal();
-      
-      // Create proposal data
       const proposalData = {
         amount: total,
         description: proposalDescription,
@@ -274,10 +244,7 @@ const AdminQuotesManagement = () => {
         termsAndConditions: proposalTerms
       };
       
-      // Send proposal
       await QuoteService.addProposal(selectedQuote.id, proposalData);
-      
-      // Reload quotes
       const filters = {};
       if (statusFilter !== "all") filters.status = statusFilter;
       if (typeFilter !== "all") filters.type = typeFilter;
@@ -292,15 +259,11 @@ const AdminQuotesManagement = () => {
     }
   };
 
-  // Submit status update
   const handleUpdateStatus = async () => {
     if (!selectedQuote || !newStatus) return;
     
     try {
-      // Update status
       await QuoteService.updateQuoteStatus(selectedQuote.id, newStatus, statusNote);
-      
-      // Reload quotes
       const filters = {};
       if (statusFilter !== "all") filters.status = statusFilter;
       if (typeFilter !== "all") filters.type = typeFilter;
@@ -315,7 +278,6 @@ const AdminQuotesManagement = () => {
     }
   };
 
-  // Loading state
   if (loading && quotes.length === 0) {
     return (
       <div className="space-y-6">
@@ -325,7 +287,6 @@ const AdminQuotesManagement = () => {
             <p className="text-muted-foreground">Gérez les demandes de devis personnalisés.</p>
           </div>
         </div>
-        
         <div className="animate-pulse space-y-4">
           <div className="h-10 bg-muted rounded-md w-full max-w-md"></div>
           <div className="h-64 bg-muted rounded-md w-full"></div>
@@ -357,10 +318,7 @@ const AdminQuotesManagement = () => {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Select
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-              >
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filtrer par statut" />
                 </SelectTrigger>
@@ -376,10 +334,7 @@ const AdminQuotesManagement = () => {
                 </SelectContent>
               </Select>
               
-              <Select
-                value={typeFilter}
-                onValueChange={setTypeFilter}
-              >
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Filtrer par type" />
                 </SelectTrigger>
@@ -411,9 +366,7 @@ const AdminQuotesManagement = () => {
                 {filteredQuotes.length > 0 ? (
                   filteredQuotes.map((quote) => (
                     <TableRow key={quote.id}>
-                      <TableCell className="font-medium">
-                        #{quote.id}
-                      </TableCell>
+                      <TableCell className="font-medium">#{quote.id}</TableCell>
                       <TableCell>
                         <div>
                           <div>{quote.contactName}</div>
@@ -482,6 +435,7 @@ const AdminQuotesManagement = () => {
           </div>
         </CardFooter>
       </Card>
+
       {/* Quote Details Dialog */}
       <Dialog open={showQuoteDetails} onOpenChange={setShowQuoteDetails}>
         <DialogContent className="sm:max-w-[700px]">
@@ -494,7 +448,6 @@ const AdminQuotesManagement = () => {
 
           {selectedQuote && (
             <div className="space-y-4">
-              {/* Status and actions */}
               <div className="flex justify-between items-center">
                 <Badge 
                   variant="outline"
@@ -537,7 +490,6 @@ const AdminQuotesManagement = () => {
                 </TabsList>
 
                 <TabsContent value="details" className="space-y-4">
-                  {/* Quote details */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium">Informations générales</h3>
@@ -597,7 +549,6 @@ const AdminQuotesManagement = () => {
                     </div>
                   </div>
 
-                  {/* Description */}
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium">Description du projet</h3>
                     <div className="text-sm p-3 bg-muted/50 rounded-lg">
@@ -607,7 +558,6 @@ const AdminQuotesManagement = () => {
                 </TabsContent>
 
                 <TabsContent value="customer" className="space-y-4">
-                  {/* Customer info */}
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium">Informations client</h3>
                     <div className="text-sm p-3 bg-muted/50 rounded-lg space-y-2">
@@ -632,7 +582,6 @@ const AdminQuotesManagement = () => {
                     </div>
                   </div>
 
-                  {/* Customer notes */}
                   {selectedQuote.notes && (
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium">Notes client</h3>
@@ -645,58 +594,6 @@ const AdminQuotesManagement = () => {
 
                 {selectedQuote.proposal && (
                   <TabsContent value="proposal" className="space-y-4">
-                    {/* Proposal details */}
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Détails de la proposition</h3>
-                      <div className="text-sm p-3 bg-muted/50 rounded-lg space-y-2">
-                        <p>
-                          <span className="font-medium">Montant total:</span>{" "}
-                          {selectedQuote.proposal.amount?.toFixed(2) || "0.00"} €
-                        </p>
-                        <p>
-                          <span className="font-medium">Valide jusqu'au:</span>{" "}
-                          {formatDate(selectedQuote.proposal.validUntil)}
-                        </p>
-                        <TabsContent value="customer" className="space-y-4">
-                  {/* Customer info */}
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Informations client</h3>
-                    <div className="text-sm p-3 bg-muted/50 rounded-lg space-y-2">
-                      <p>
-                        <span className="font-medium">Nom:</span>{" "}
-                        {selectedQuote.contactName}
-                      </p>
-                      <p>
-                        <span className="font-medium">Email:</span>{" "}
-                        <a href={`mailto:${selectedQuote.contactEmail}`} className="text-primary hover:underline">
-                          {selectedQuote.contactEmail}
-                        </a>
-                      </p>
-                      {selectedQuote.contactPhone && (
-                        <p>
-                          <span className="font-medium">Téléphone:</span>{" "}
-                          <a href={`tel:${selectedQuote.contactPhone}`} className="text-primary hover:underline">
-                            {selectedQuote.contactPhone}
-                          </a>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Customer notes */}
-                  {selectedQuote.notes && (
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium">Notes client</h3>
-                      <div className="text-sm p-3 bg-muted/50 rounded-lg">
-                        {selectedQuote.notes}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-
-                {selectedQuote.proposal && (
-                  <TabsContent value="proposal" className="space-y-4">
-                    {/* Proposal details */}
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium">Détails de la proposition</h3>
                       <div className="text-sm p-3 bg-muted/50 rounded-lg space-y-2">
@@ -715,8 +612,7 @@ const AdminQuotesManagement = () => {
                       </div>
                     </div>
 
-                    {/* Proposal items */}
-                    {selectedQuote.proposal.items && selectedQuote.proposal.items.length > 0 && (
+                    {selectedQuote.proposal.items?.length > 0 && (
                       <div className="space-y-2">
                         <h3 className="text-sm font-medium">Éléments du devis</h3>
                         <div className="rounded-md border overflow-hidden">
@@ -744,7 +640,6 @@ const AdminQuotesManagement = () => {
                       </div>
                     )}
 
-                    {/* Terms & conditions */}
                     {selectedQuote.proposal.termsAndConditions && (
                       <div className="space-y-2">
                         <h3 className="text-sm font-medium">Conditions générales</h3>
@@ -756,39 +651,33 @@ const AdminQuotesManagement = () => {
                   </TabsContent>
                 )}
 
-<TabsContent value="history" className="space-y-4">
-                  {/* Status history */}
-                  {selectedQuote.statusHistory && selectedQuote.statusHistory.length > 0 ? (
-                    <div className="space-y-4">
-                      {selectedQuote.statusHistory.map((status, index) => (
-                        <div key={index} className="relative pl-8 pb-4">
-                          {/* Status timeline connector */}
-                          {index < selectedQuote.statusHistory.length - 1 && (
-                            <div className="absolute left-3 top-3 h-full w-px bg-muted-foreground/30"></div>
-                          )}
-                          
-                          {/* Status badge */}
-                          <div className="absolute left-0 top-0 h-6 w-6 rounded-full bg-background flex items-center justify-center border">
-                            {statusConfig[status.status]?.icon || <ClockIcon className="h-3 w-3" />}
-                          </div>
-                          
-                          {/* Status info */}
-                          <div>
-                            <div className="flex justify-between mb-1">
-                              <span className="font-medium">
-                                {statusConfig[status.status]?.label || status.status}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(status.date).toLocaleString('fr-FR')}
-                              </span>
-                            </div>
-                            {status.notes && (
-                              <p className="text-sm text-muted-foreground">{status.notes}</p>
-                            )}
-                          </div>
+                <TabsContent value="history" className="space-y-4">
+                  {selectedQuote.statusHistory?.length > 0 ? (
+                    selectedQuote.statusHistory.map((status, index) => (
+                      <div key={index} className="relative pl-8 pb-4">
+                        {index < selectedQuote.statusHistory.length - 1 && (
+                          <div className="absolute left-3 top-3 h-full w-px bg-muted-foreground/30"></div>
+                        )}
+                        
+                        <div className="absolute left-0 top-0 h-6 w-6 rounded-full bg-background flex items-center justify-center border">
+                          {statusConfig[status.status]?.icon || <ClockIcon className="h-3 w-3" />}
                         </div>
-                      ))}
-                    </div>
+                        
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="font-medium">
+                              {statusConfig[status.status]?.label || status.status}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(status.date).toLocaleString('fr-FR')}
+                            </span>
+                          </div>
+                          {status.notes && (
+                            <p className="text-sm text-muted-foreground">{status.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
                   ) : (
                     <p className="text-sm text-muted-foreground">Aucun historique disponible</p>
                   )}
@@ -812,10 +701,7 @@ const AdminQuotesManagement = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Choisir un nouveau statut</h3>
-              <Select
-                value={newStatus}
-                onValueChange={setNewStatus}
-              >
+              <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner un statut" />
                 </SelectTrigger>
@@ -851,6 +737,7 @@ const AdminQuotesManagement = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Create Proposal Dialog */}
       <Dialog open={showCreateProposal} onOpenChange={setShowCreateProposal}>
         <DialogContent className="sm:max-w-[700px]">

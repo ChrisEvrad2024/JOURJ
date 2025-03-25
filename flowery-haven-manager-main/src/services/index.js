@@ -9,6 +9,7 @@ import AddressService from './AddressService';
 import OrderService from './OrderService';
 import QuoteService from './QuoteService';
 import BlogService from './BlogService';
+export * from './settings.service';
 import AppInitializationService from './AppInitializationService';
 export { default as OfflineService } from './OfflineService';
 export { default as SyncService } from './SyncService';

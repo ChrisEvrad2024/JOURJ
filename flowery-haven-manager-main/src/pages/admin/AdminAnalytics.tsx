@@ -34,7 +34,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 // Services
-import { OrderService, QuoteService, ProductService, UserService } from "@/services";
+import { OrderService, QuoteService, ProductService } from "@/services";
 
 // Types de période pour les analyses
 const PERIOD_TYPES = {

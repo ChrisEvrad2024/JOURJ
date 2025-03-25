@@ -419,96 +419,81 @@ class ProductService {
             if (productsCount === 0) {
                 // Ajouter des produits par défaut
                 const defaultProducts = [
-                    {
-                        id: 'elegance-rose-bouquet',
-                        name: 'Bouquet Élégance Rose',
-                        description: 'Un bouquet raffiné de roses roses et blanches, parfait pour exprimer votre amour ou votre admiration.',
-                        price: 59.99,
-                        stock: 15,
-                        images: [
-                            'https://images.unsplash.com/photo-1537530360953-3b8b369e01fe?w=800',
-                            'https://images.unsplash.com/photo-1594654281947-7114da78db59?w=800'
-                        ],
-                        category: 'bouquets',
-                        popular: true,
-                        featured: true,
-                        sku: 'BQT-ROSE-001'
-                    },
-                    {
-                        id: 'spring-harmony',
-                        name: 'Harmonie Printanière',
-                        description: 'Une explosion de couleurs printanières avec un mélange de tulipes, jonquilles et renoncules.',
-                        price: 49.99,
-                        stock: 8,
-                        images: [
-                            'https://images.unsplash.com/photo-1613539246066-78db6f03a16f?w=800',
-                            'https://images.unsplash.com/photo-1546842931-886c185b4c8c?w=800'
-                        ],
-                        category: 'bouquets',
-                        popular: true,
-                        featured: false,
-                        sku: 'BQT-SPRING-002'
-                    },
-                    {
-                        id: 'zen-orchid',
-                        name: 'Orchidée Zen',
-                        description: 'Une magnifique orchidée blanche en pot, symbole d\'élégance et de pureté.',
-                        price: 69.99,
-                        stock: 5,
-                        images: [
-                            'https://images.unsplash.com/photo-1524598171347-abf62dfd6694?w=800',
-                            'https://images.unsplash.com/photo-1594663358079-4a39ff4f4ef4?w=800'
-                        ],
-                        category: 'potted-plants',
-                        popular: true,
-                        featured: true,
-                        sku: 'PLT-ORCH-001'
-                    },
-                    {
-                        id: 'rustic-wildflowers',
-                        name: 'Fleurs Sauvages Rustiques',
-                        description: 'Un arrangement bohème de fleurs sauvages dans un vase en terre cuite.',
-                        price: 44.99,
-                        stock: 12,
-                        images: [
-                            'https://images.unsplash.com/photo-1470509037663-253afd7f0f51?w=800',
-                            'https://images.unsplash.com/photo-1457089328109-e5d9bd499191?w=800'
-                        ],
-                        category: 'fresh-flowers',
-                        popular: false,
-                        featured: false,
-                        sku: 'FLW-WILD-003'
-                    },
-                    {
-                        id: 'succulent-garden',
-                        name: 'Jardin de Succulentes',
-                        description: 'Un ensemble harmonieux de succulentes dans un pot design, facile d\'entretien et durable.',
-                        price: 39.99,
-                        stock: 20,
-                        images: [
-                            'https://images.unsplash.com/photo-1446071103084-c257b5f70672?w=800',
-                            'https://images.unsplash.com/photo-1520302630591-fd2dfd937acd?w=800'
-                        ],
-                        category: 'potted-plants',
-                        popular: false,
-                        featured: false,
-                        sku: 'PLT-SUCC-002'
-                    },
-                    {
-                        id: 'vintage-roses',
-                        name: 'Roses Vintage',
-                        description: 'Des roses aux teintes pastel dans un vase vintage, évoquant une élégance intemporelle.',
-                        price: 54.99,
-                        stock: 0,
-                        images: [
-                            'https://images.unsplash.com/photo-1519378058457-4c29a0a2efac?w=800',
-                            'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800'
-                        ],
-                        category: 'fresh-flowers',
-                        popular: true,
-                        featured: false,
-                        sku: 'FLW-ROSE-002'
-                    }
+                    // {
+                    //     id: 'spring-harmony',
+                    //     name: 'Harmonie Printanière',
+                    //     description: 'Une explosion de couleurs printanières avec un mélange de tulipes, jonquilles et renoncules.',
+                    //     price: 49.99,
+                    //     stock: 8,
+                    //     images: [
+                    //         'https://images.unsplash.com/photo-1613539246066-78db6f03a16f?w=800',
+                    //         'https://images.unsplash.com/photo-1546842931-886c185b4c8c?w=800'
+                    //     ],
+                    //     category: 'bouquets',
+                    //     popular: true,
+                    //     featured: false,
+                    //     sku: 'BQT-SPRING-002'
+                    // },
+                    // {
+                    //     id: 'zen-orchid',
+                    //     name: 'Orchidée Zen',
+                    //     description: 'Une magnifique orchidée blanche en pot, symbole d\'élégance et de pureté.',
+                    //     price: 69.99,
+                    //     stock: 5,
+                    //     images: [
+                    //         'https://images.unsplash.com/photo-1524598171347-abf62dfd6694?w=800',
+                    //         'https://images.unsplash.com/photo-1594663358079-4a39ff4f4ef4?w=800'
+                    //     ],
+                    //     category: 'potted-plants',
+                    //     popular: true,
+                    //     featured: true,
+                    //     sku: 'PLT-ORCH-001'
+                    // },
+                    // {
+                    //     id: 'rustic-wildflowers',
+                    //     name: 'Fleurs Sauvages Rustiques',
+                    //     description: 'Un arrangement bohème de fleurs sauvages dans un vase en terre cuite.',
+                    //     price: 44.99,
+                    //     stock: 12,
+                    //     images: [
+                    //         'https://images.unsplash.com/photo-1470509037663-253afd7f0f51?w=800',
+                    //         'https://images.unsplash.com/photo-1457089328109-e5d9bd499191?w=800'
+                    //     ],
+                    //     category: 'fresh-flowers',
+                    //     popular: false,
+                    //     featured: false,
+                    //     sku: 'FLW-WILD-003'
+                    // },
+                    // {
+                    //     id: 'succulent-garden',
+                    //     name: 'Jardin de Succulentes',
+                    //     description: 'Un ensemble harmonieux de succulentes dans un pot design, facile d\'entretien et durable.',
+                    //     price: 39.99,
+                    //     stock: 20,
+                    //     images: [
+                    //         'https://images.unsplash.com/photo-1446071103084-c257b5f70672?w=800',
+                    //         'https://images.unsplash.com/photo-1520302630591-fd2dfd937acd?w=800'
+                    //     ],
+                    //     category: 'potted-plants',
+                    //     popular: false,
+                    //     featured: false,
+                    //     sku: 'PLT-SUCC-002'
+                    // },
+                    // {
+                    //     id: 'vintage-roses',
+                    //     name: 'Roses Vintage',
+                    //     description: 'Des roses aux teintes pastel dans un vase vintage, évoquant une élégance intemporelle.',
+                    //     price: 54.99,
+                    //     stock: 0,
+                    //     images: [
+                    //         'https://images.unsplash.com/photo-1519378058457-4c29a0a2efac?w=800',
+                    //         'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800'
+                    //     ],
+                    //     category: 'fresh-flowers',
+                    //     popular: true,
+                    //     featured: false,
+                    //     sku: 'FLW-ROSE-002'
+                    // }
                 ];
 
                 for (const product of defaultProducts) {
