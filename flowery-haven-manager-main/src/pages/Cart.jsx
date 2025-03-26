@@ -7,6 +7,8 @@ import { Minus, Plus, X, ShoppingBag } from 'lucide-react';
 import { toast } from "sonner";
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 const Cart = () => {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
@@ -21,13 +23,13 @@ const Cart = () => {
   } = useCart() || {}; // Ajouter || {} pour éviter l'erreur si useCart() renvoie undefined
   
   
-  // src/pages/Cart.jsx (suite)
   const proceedToCheckout = async () => {
     if (!currentUser) {
       toast.error("Vous devez être connecté", {
         description: "Veuillez vous connecter pour finaliser votre commande",
         duration: 5000,
       });
+      navigate('/auth/login');
       return;
     }
     
@@ -61,6 +63,7 @@ const Cart = () => {
     } finally {
       setIsProcessingOrder(false);
     }
+    navigate('/checkout');
   };
   
   return (

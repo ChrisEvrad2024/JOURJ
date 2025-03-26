@@ -17,12 +17,40 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
+
+// ChezFlora Logo Component
+const ChezFloraLogo = ({ className = "h-12" }) => {
+  return (
+    <svg 
+      viewBox="0 0 400 100" 
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* CHEZ text in pink */}
+      <text x="25" y="60" fontFamily="serif" fontSize="45" fill="#E5848A">CHEZ</text>
+      
+      {/* FLORA text in black */}
+      <text x="140" y="60" fontFamily="serif" fontSize="65" fontWeight="500" fill="#000000">FLORA</text>
+      
+      {/* Rose illustration */}
+      <g transform="translate(240, 45) scale(0.8)">
+        <path d="M30,0 C40,10 50,20 40,30 C30,40 20,30 10,20 C0,10 10,0 30,0" fill="#FFB6C1" />
+        <path d="M25,5 C35,15 40,20 35,30 C30,35 20,30 15,20 C10,15 15,5 25,5" fill="#FF9AA2" />
+        <path d="M25,10 C30,15 35,25 30,30 C25,35 15,25 20,15 C22,12 23,10 25,10" fill="#E5848A" />
+        <path d="M30,0 C40,10 50,20 40,30 C30,40 20,30 10,20 C0,10 10,0 30,0" fill="none" stroke="#000000" strokeWidth="1.5" />
+      </g>
+    </svg>
+  );
+};
+
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const { cartItems, cartTotal, cartCount } = useCart();
-  const { wishlistCount } = useWishlist();
+  const wishlist = useWishlist();
+  // Utilisation sécurisée de la valeur wishlistCount
+  const wishlistCount = wishlist?.wishlistCount || wishlist?.items?.length || 0;
   const { currentUser, logout, isAdmin } = useAuth();
 
   useEffect(() => {
@@ -56,9 +84,9 @@ export const Navbar = () => {
         {/* Logo */}
         <Link 
           to="/"
-          className="font-serif text-2xl font-medium tracking-tight"
+          className="font-serif tracking-tight flex items-center"
         >
-          ChezFlora
+          <ChezFloraLogo className="h-10 md:h-12" />
         </Link>
 
         {/* Desktop Navigation */}

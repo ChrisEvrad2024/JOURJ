@@ -67,6 +67,44 @@ class AuthService {
         }
     }
 
+
+    /**
+   * Gère le panier après connexion
+   * @param {string} userId - ID de l'utilisateur
+   */
+    static async handleCartAfterLogin(userId) {
+        try {
+            const anonymousCart = CartService.getAnonymousCart();
+
+            // Si l'utilisateur avait des articles dans son panier anonyme
+            if (anonymousCart.length > 0) {
+                // Récupérer également son panier enregistré
+                const savedCart = await CartService.getUserCart(userId);
+
+                // Si les deux paniers contiennent des articles, proposer la fusion
+                if (savedCart.length > 0) {
+                    // Déclencher l'affichage du dialogue de fusion
+                    // En stockant les informations dans un état global ou localStorage temporaire
+                    StorageService.setSessionStorageItem('pendingCartMerge', {
+                        anonymousCart,
+                        savedCart,
+                        userId
+                    });
+
+                    // On déclenche un événement pour que les composants puissent réagir
+                    window.dispatchEvent(new CustomEvent('showCartMergeDialog'));
+                } else {
+                    // Si pas de panier enregistré, transférer automatiquement le panier anonyme
+                    await CartService.transferAnonymousCartToUser(anonymousCart, userId);
+                }
+            }
+            // Sinon, ne rien faire (le panier enregistré sera chargé automatiquement)
+        } catch (error) {
+            console.error('Erreur lors de la gestion du panier après connexion:', error);
+            // Ne pas bloquer la connexion en cas d'erreur avec le panier
+        }
+    }
+
     /**
      * Génère un token d'authentification (simulé)
      * @param {string} userId - ID de l'utilisateur
@@ -82,8 +120,15 @@ class AuthService {
      * Déconnecte l'utilisateur en cours
      */
     static logout() {
+        // Supprimer le token et les infos utilisateur
         StorageService.removeLocalStorageItem(STORAGE_KEYS.CURRENT_USER);
         StorageService.removeLocalStorageItem(STORAGE_KEYS.AUTH_TOKEN);
+
+        // Vider le panier localStorage
+        localStorage.removeItem(CART_STORAGE_KEY);
+
+        // Notifier les composants que le panier a changé
+        window.dispatchEvent(new Event('cartUpdated'));
     }
 
     /**
@@ -99,7 +144,7 @@ class AuthService {
         try {
             // Vérifier si l'utilisateur existe déjà
             const users = await DbService.getByIndex(STORES.USERS, 'email', userData.email.toLowerCase());
-            
+
             if (users.length > 0) {
                 throw new Error('Un utilisateur avec cette adresse email existe déjà');
             }
@@ -121,11 +166,11 @@ class AuthService {
 
             // Connecter automatiquement l'utilisateur en créant un token et en stockant ses informations
             const authToken = this._generateAuthToken(newUser.id);
-            
+
             // Nettoyer l'objet utilisateur avant de le stocker (retirer le mot de passe)
             const userToStore = { ...newUser };
             delete userToStore.password;
-            
+
             StorageService.setLocalStorageItem(STORAGE_KEYS.CURRENT_USER, userToStore);
             StorageService.setLocalStorageItem(STORAGE_KEYS.AUTH_TOKEN, authToken);
 
@@ -262,11 +307,11 @@ class AuthService {
     static async getUserByEmail(email) {
         try {
             const users = await DbService.getByIndex(STORES.USERS, 'email', email.toLowerCase());
-            
+
             if (users.length === 0) {
                 return null;
             }
-            
+
             // Retourner l'utilisateur sans le mot de passe
             const user = { ...users[0] };
             delete user.password;

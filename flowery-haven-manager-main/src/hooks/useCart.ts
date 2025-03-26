@@ -1,188 +1,171 @@
-// import { useState, useEffect, useCallback } from 'react';
-// import { CartService } from '../services';
-
-// /**
-//  * Hook personnalisé pour gérer le panier
-//  * @returns {Object} Méthodes et données du panier
-//  */
-// const useCart = () => {
-//     const [cart, setCart] = useState([]);
-//     const [loading, setLoading] = useState(true);
-//     const [error, setError] = useState(null);
-//     const [total, setTotal] = useState(0);
-//     const [itemCount, setItemCount] = useState(0);
-
-//     // Charger le panier
-//     const loadCart = useCallback(async () => {
-//         try {
-//             setLoading(true);
-//             setError(null);
-
-//             const cartItems = await CartService.getCart();
-//             setCart(cartItems);
-
-//             const cartTotal = await CartService.getCartTotal();
-//             setTotal(cartTotal);
-
-//             const count = await CartService.getCartItemCount();
-//             setItemCount(count);
-//         } catch (err) {
-//             console.error('Erreur lors du chargement du panier:', err);
-//             setError(err.message);
-//         } finally {
-//             setLoading(false);
-//         }
-//     }, []);
-
-//     // Ajouter un produit au panier
-//     const addToCart = useCallback(async (productId, quantity = 1) => {
-//         try {
-//             setLoading(true);
-//             setError(null);
-
-//             await CartService.addToCart(productId, quantity);
-
-//             // Recharger le panier
-//             await loadCart();
-
-//             return true;
-//         } catch (err) {
-//             console.error('Erreur lors de l\'ajout au panier:', err);
-//             setError(err.message);
-//             return false;
-//         } finally {
-//             setLoading(false);
-//         }
-//     }, [loadCart]);
-
-//     // Mettre à jour la quantité d'un produit
-//     const updateQuantity = useCallback(async (itemId, quantity) => {
-//         try {
-//             setLoading(true);
-//             setError(null);
-
-//             await CartService.updateCartItemQuantity(itemId, quantity);
-
-//             // Recharger le panier
-//             await loadCart();
-
-//             return true;
-//         } catch (err) {
-//             console.error('Erreur lors de la mise à jour de la quantité:', err);
-//             setError(err.message);
-//             return false;
-//         } finally {
-//             setLoading(false);
-//         }
-//     }, [loadCart]);
-
-//     // Supprimer un produit du panier
-//     const removeFromCart = useCallback(async (itemId) => {
-//         try {
-//             setLoading(true);
-//             setError(null);
-
-//             await CartService.removeFromCart(itemId);
-
-//             // Recharger le panier
-//             await loadCart();
-
-//             return true;
-//         } catch (err) {
-//             console.error('Erreur lors de la suppression du panier:', err);
-//             setError(err.message);
-//             return false;
-//         } finally {
-//             setLoading(false);
-//         }
-//     }, [loadCart]);
-
-//     // Vider le panier
-//     const clearCart = useCallback(async () => {
-//         try {
-//             setLoading(true);
-//             setError(null);
-
-//             await CartService.clearCart();
-
-//             // Recharger le panier
-//             await loadCart();
-
-//             return true;
-//         } catch (err) {
-//             console.error('Erreur lors du vidage du panier:', err);
-//             setError(err.message);
-//             return false;
-//         } finally {
-//             setLoading(false);
-//         }
-//     }, [loadCart]);
-
-//     // Charger le panier au montage du composant
-//     useEffect(() => {
-//         loadCart();
-
-//         // Écouter les événements de mise à jour du panier
-//         const handleCartUpdate = () => {
-//             loadCart();
-//         };
-
-//         window.addEventListener('cartUpdated', handleCartUpdate);
-
-//         // Nettoyage
-//         return () => {
-//             window.removeEventListener('cartUpdated', handleCartUpdate);
-//         };
-//     }, [loadCart]);
-
-//     return {
-//         cart,
-//         loading,
-//         error,
-//         total,
-//         itemCount,
-//         addToCart,
-//         updateQuantity,
-//         removeFromCart,
-//         clearCart,
-//         refreshCart: loadCart
-//     };
-// };
-
-// export default useCart;
-
-// Stub pour useCart
-// src/hooks/useCart.js
-// import { useContext } from 'react';
-// import { useCart as useCartFromContext } from '../contexts/CartContext';
-
-
-// export const useCart = () => {
-//     export const useCart = useCartFromContext;
-
-
-//     if (context === undefined) {
-//         // Retourner un objet par défaut pour éviter les erreurs
-//         return {
-//             cartItems: [],
-//             cartTotal: 0,
-//             cartCount: 0,
-//             addToCart: () => console.warn('CartContext non disponible'),
-//             updateItemQuantity: () => console.warn('CartContext non disponible'),
-//             removeFromCart: () => console.warn('CartContext non disponible'),
-//             clearCart: () => console.warn('CartContext non disponible'),
-//             createOrder: async () => {
-//                 console.warn('CartContext non disponible');
-//                 throw new Error('Impossible de créer une commande - CartContext non disponible');
-//             }
-//         };
-//     }
-
-//     return context;
-// };
-
 // src/hooks/useCart.ts
+import { useState, useEffect, useCallback } from 'react';
+import { Product } from '@/types/product';
+import {
+  getCart,
+  addToCart as addToCartLib,
+  removeFromCart as removeFromCartLib,
+  updateCartItemQuantity as updateQuantityLib,
+  clearCart as clearCartLib,
+  getCartTotal,
+  getCartItemCount,
+  createOrderFromCart
+} from '@/lib/cart';
+import { toast } from 'sonner';
 
-import { useCart as useCartFromContext } from '../contexts/CartContext';
+export function useCart() {
+  const [cartItems, setCartItems] = useState(getCart());
+  const [cartTotal, setCartTotal] = useState(getCartTotal());
+  const [cartCount, setCartCount] = useState(getCartItemCount());
+  const [loading, setLoading] = useState(false);
 
-export const useCart = useCartFromContext;
+  // Fonction pour rafraîchir les données du panier
+  const refreshCart = useCallback(() => {
+    setCartItems(getCart());
+    setCartTotal(getCartTotal());
+    setCartCount(getCartItemCount());
+  }, []);
+
+  // Ajouter un produit au panier
+  const addToCart = useCallback((product: Product, quantity: number = 1) => {
+    try {
+      setLoading(true);
+      const success = addToCartLib(product, quantity);
+      
+      if (success) {
+        refreshCart();
+        return true;
+      } else {
+        toast.error("Impossible d'ajouter au panier", {
+          description: "Vérifiez si le produit est en stock.",
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in addToCart:", error);
+      toast.error("Erreur lors de l'ajout au panier", {
+        description: error instanceof Error ? error.message : "Une erreur est survenue",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshCart]);
+
+  // Supprimer un produit du panier
+  const removeFromCart = useCallback((productId: string) => {
+    try {
+      setLoading(true);
+      const success = removeFromCartLib(productId);
+      
+      if (success) {
+        refreshCart();
+        return true;
+      } else {
+        toast.error("Impossible de supprimer du panier");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in removeFromCart:", error);
+      toast.error("Erreur lors de la suppression du panier");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshCart]);
+
+  // Mettre à jour la quantité d'un produit
+  const updateItemQuantity = useCallback((productId: string, quantity: number) => {
+    try {
+      setLoading(true);
+      const success = updateQuantityLib(productId, quantity);
+      
+      if (success) {
+        refreshCart();
+        return true;
+      } else {
+        toast.error("Impossible de mettre à jour la quantité", {
+          description: "Vérifiez si le produit est en stock.",
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in updateItemQuantity:", error);
+      toast.error("Erreur lors de la mise à jour de la quantité", {
+        description: error instanceof Error ? error.message : "Une erreur est survenue",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshCart]);
+
+  // Vider le panier
+  const clearCart = useCallback(() => {
+    try {
+      setLoading(true);
+      clearCartLib();
+      refreshCart();
+      return true;
+    } catch (error) {
+      console.error("Error in clearCart:", error);
+      toast.error("Erreur lors du vidage du panier");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshCart]);
+
+  // Créer une commande à partir du panier
+  const createOrder = useCallback(async (orderDetails: any) => {
+    try {
+      setLoading(true);
+      const order = await createOrderFromCart(orderDetails);
+      refreshCart();
+      return order;
+    } catch (error) {
+      console.error("Error in createOrder:", error);
+      toast.error("Erreur lors de la création de la commande", {
+        description: error instanceof Error ? error.message : "Une erreur est survenue",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshCart]);
+
+  // Écouter les événements de mise à jour du panier
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      refreshCart();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    window.addEventListener('storage', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener('storage', handleCartUpdate);
+    };
+  }, [refreshCart]);
+
+  // Charger le panier au montage du composant
+  useEffect(() => {
+    refreshCart();
+  }, [refreshCart]);
+
+  return {
+    cartItems,
+    cartTotal,
+    cartCount,
+    loading,
+    addToCart,
+    removeFromCart,
+    updateItemQuantity,
+    clearCart,
+    createOrder,
+    refreshCart
+  };
+}
+
+export default useCart;

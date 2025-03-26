@@ -15,17 +15,26 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [inWishlist, setInWishlist] = useState(isInWishlist(product.id));
+  
+  const isInStock = product.stock === undefined || product.stock > 0;
 
   const quickAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // Utiliser le hook pour ajouter au panier au lieu de la fonction de lib
-    const success = addToCart(product, 1);
-    
-    if (success !== false) {
-      toast.success("Ajouté au panier", {
-        description: `${product.name} a été ajouté à votre panier.`,
+    if (isInStock) {
+      // Utiliser le hook pour ajouter au panier au lieu de la fonction de lib
+      const success = addToCart(product, 1);
+      
+      if (success !== false) {
+        toast.success("Ajouté au panier", {
+          description: `${product.name} a été ajouté à votre panier.`,
+          duration: 3000,
+        });
+      }
+    } else {
+      toast.error("Produit indisponible", {
+        description: "Ce produit est actuellement en rupture de stock.",
         duration: 3000,
       });
     }
@@ -61,8 +70,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
       });
     }
   };
-
-  const isInStock = product.stock === undefined || product.stock > 0;
 
   // Récupérer l'image sécurisée
   const productImage = product.images && product.images.length > 0 

@@ -1,13 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+// Import the logo - you'll need to adjust the path to match your project structure
+import logoImage from '../../assets/images/chezflora-logo.png';
 
 // Hero carousel images
 const heroImages = [
   'https://images.unsplash.com/photo-1483794344563-d27a8d18014e?q=80&w=2070',
   'https://images.unsplash.com/photo-1470509037663-253afd7f0f51?q=80&w=1974',
-  'https://images.unsplash.com/photo-1508610048659-a06b669e3321?q=80&w=2070'
+  logoImage // Added the logo as the 4th image
 ];
 
 const Hero = () => {
@@ -35,7 +36,7 @@ const Hero = () => {
           <img
             src={image}
             alt={`ChezFlora slide ${index + 1}`}
-            className="w-full h-full object-cover"
+            className={`w-full h-full ${index === heroImages.length - 1 ? 'object-contain' : 'object-cover'}`}
           />
         </div>
       ))}

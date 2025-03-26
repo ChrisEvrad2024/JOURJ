@@ -64,7 +64,7 @@ const Register = () => {
       });
       
       toast.success("Compte créé avec succès", {
-        description: "Bienvenue sur Floralie ! Votre compte a été créé.",
+        description: "Bienvenue sur ChezFlora ! Votre compte a été créé.",
       });
       
       // Rediriger directement vers la page d'accueil (l'utilisateur est déjà connecté)

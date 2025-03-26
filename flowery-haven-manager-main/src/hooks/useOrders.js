@@ -1,152 +1,141 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+// src/hooks/useOrders.js
+import { useState, useEffect, useCallback } from 'react';
 import { OrderService } from '@/services';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/hooks/useCart';
 
 /**
  * Hook personnalisé pour gérer les commandes de l'utilisateur
  */
 export const useOrders = () => {
+    const { currentUser } = useAuth();
+    const { addToCart } = useCart();
+
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { currentUser } = useAuth();
 
-    // Charger les commandes au démarrage
-    useEffect(() => {
+    // Charger les commandes de l'utilisateur
+    const loadOrders = useCallback(async () => {
         if (!currentUser) {
             setOrders([]);
             setLoading(false);
             return;
         }
 
-        const fetchOrders = async () => {
-            try {
-                setLoading(true);
-                setError(null);
+        try {
+            setLoading(true);
+            setError(null);
 
-                // Utilisateur admin : toutes les commandes ou commandes filtrées
-                const userOrders = currentUser.role === 'admin'
-                    ? await OrderService.getAllOrders()
-                    : await OrderService.getUserOrders(currentUser.id);
+            const userOrders = await OrderService.getUserOrders();
 
-                setOrders(userOrders);
-            } catch (err) {
-                console.error('Erreur lors du chargement des commandes:', err);
-                setError(err.message || 'Erreur lors du chargement des commandes');
-            } finally {
-                setLoading(false);
-            }
-        };
+            // Trier les commandes par date (plus récente en premier)
+            userOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        fetchOrders();
+            setOrders(userOrders);
+        } catch (err) {
+            console.error('Erreur lors du chargement des commandes:', err);
+            setError('Impossible de charger vos commandes. Veuillez réessayer plus tard.');
+        } finally {
+            setLoading(false);
+        }
     }, [currentUser]);
+
+    // Récupérer les commandes au chargement du composant
+    useEffect(() => {
+        loadOrders();
+    }, [loadOrders]);
+
+    /**
+     * Obtenir une commande par son ID
+     * @param {string} orderId - ID de la commande
+     * @returns {Promise<Object>} Détails de la commande
+     */
+    const getOrderById = useCallback(async (orderId) => {
+        try {
+            return await OrderService.getOrderById(orderId);
+        } catch (err) {
+            console.error(`Erreur lors de la récupération de la commande ${orderId}:`, err);
+            throw err;
+        }
+    }, []);
 
     /**
      * Annuler une commande
      * @param {string} orderId - ID de la commande
+     * @param {string} reason - Raison de l'annulation
      * @returns {Promise<boolean>} Succès de l'opération
      */
-    const cancelOrder = async (orderId) => {
+    const cancelOrder = useCallback(async (orderId, reason) => {
         try {
-            const reason = "Annulée à la demande du client";
             await OrderService.cancelOrder(orderId, reason);
 
-            // Mettre à jour l'état local
-            setOrders(orders.map(order => {
-                if (order.id === orderId) {
-                    return {
-                        ...order,
-                        status: 'cancelled',
-                        statusHistory: [
-                            ...(order.statusHistory || []),
-                            {
-                                status: 'cancelled',
-                                date: new Date().toISOString(),
-                                notes: `Annulé par client: ${reason}`
-                            }
-                        ]
-                    };
-                }
-                return order;
-            }));
+            // Mettre à jour la liste des commandes
+            const updatedOrders = orders.map(order =>
+                order.id === orderId
+                    ? { ...order, status: 'cancelled', cancellationReason: reason }
+                    : order
+            );
 
+            setOrders(updatedOrders);
             return true;
         } catch (err) {
             console.error(`Erreur lors de l'annulation de la commande ${orderId}:`, err);
-            setError(err.message || `Erreur lors de l'annulation de la commande`);
-            return false;
+            throw err;
         }
-    };
+    }, [orders]);
 
     /**
-     * Récupère une commande spécifique
-     * @param {string} orderId - ID de la commande
-     * @returns {Object|null} La commande ou null si non trouvée
-     */
-    const getOrderById = (orderId) => {
-        return orders.find(order => order.id === orderId) || null;
-    };
-
-    /**
-     * Filtrer les commandes par statut
-     * @param {string} status - Statut à filtrer
-     * @returns {Array} Commandes filtrées
-     */
-    const getOrdersByStatus = (status) => {
-        if (!status || status === 'all') return orders;
-        return orders.filter(order => order.status === status);
-    };
-
-    /**
-     * Mise à jour du statut d'une commande (admin uniquement)
-     * @param {string} orderId - ID de la commande
-     * @param {string} newStatus - Nouveau statut
-     * @param {string} notes - Notes additionnelles
+     * Commander à nouveau les articles d'une commande précédente
+     * @param {Array} items - Articles à ajouter au panier
      * @returns {Promise<boolean>} Succès de l'opération
      */
-    const updateOrderStatus = async (orderId, newStatus, notes = '') => {
-        if (!currentUser || currentUser.role !== 'admin') {
-            setError('Permission refusée');
-            return false;
-        }
-
+    const reorderItems = useCallback(async (items) => {
         try {
-            await OrderService.updateOrderStatus(orderId, newStatus, notes);
+            if (!items || items.length === 0) {
+                throw new Error('Aucun article à commander');
+            }
 
-            // Mettre à jour l'état local
-            setOrders(orders.map(order => {
-                if (order.id === orderId) {
-                    return {
-                        ...order,
-                        status: newStatus,
-                        statusHistory: [
-                            ...(order.statusHistory || []),
-                            {
-                                status: newStatus,
-                                date: new Date().toISOString(),
-                                notes
-                            }
-                        ]
-                    };
-                }
-                return order;
-            }));
+            // Ajouter chaque article au panier
+            for (const item of items) {
+                await addToCart(item.productId, item.quantity);
+            }
 
             return true;
         } catch (err) {
-            console.error(`Erreur lors de la mise à jour du statut de la commande ${orderId}:`, err);
-            setError(err.message || `Erreur lors de la mise à jour du statut de la commande`);
-            return false;
+            console.error('Erreur lors de la recommande des articles:', err);
+            throw err;
         }
-    };
+    }, [addToCart]);
+
+    /**
+     * Création d'une commande (à partir du panier)
+     * Cette fonction serait utilisée pour finaliser le panier
+     * @param {Object} orderData - Données de la commande
+     * @returns {Promise<Object>} Commande créée
+     */
+    const createOrder = useCallback(async (orderData) => {
+        try {
+            const newOrder = await OrderService.createOrder(orderData);
+
+            // Ajouter la nouvelle commande à la liste
+            setOrders(prevOrders => [newOrder, ...prevOrders]);
+
+            return newOrder;
+        } catch (err) {
+            console.error('Erreur lors de la création de la commande:', err);
+            throw err;
+        }
+    }, []);
 
     return {
         orders,
         loading,
         error,
-        cancelOrder,
         getOrderById,
-        getOrdersByStatus,
-        updateOrderStatus
+        cancelOrder,
+        reorderItems,
+        createOrder,
+        refreshOrders: loadOrders
     };
 };
