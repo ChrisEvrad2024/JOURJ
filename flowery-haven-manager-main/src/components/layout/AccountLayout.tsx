@@ -1,17 +1,11 @@
-import { ReactNode } from 'react';
-import { Outlet, NavLink, Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+// src/components/layout/AccountLayout.tsx
+import React from 'react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { User, ShoppingBag, FileText, MapPin, Settings, ChevronRight } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { Separator } from '@/components/ui/separator';
-import { 
-  User, 
-  ShoppingBag, 
-  MapPin, 
-  FileText, 
-  Settings,
-  ChevronRight
-} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const AccountLayout = () => {
   const { currentUser, isAdmin } = useAuth();

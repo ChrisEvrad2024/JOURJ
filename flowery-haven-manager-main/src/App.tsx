@@ -14,8 +14,10 @@ import { AppInitializationService } from './services';
 import OfflineIndicator from './components/common/OfflineIndicator';
 import { Progress } from "@/components/ui/progress";
 import CartMergeDialog from '@/components/cart/CartMergeDialog';
-import Checkout from "@/pages/Checkout";
-import OrderConfirmation from "@/pages/OrderConfirmation";
+import Orders from './pages/account/Orders';
+import OrderDetails from './pages/account/OrderDetails';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
 
 // Import des composants principaux (non lazy-loaded)
 import Index from "./pages/Index";
@@ -249,9 +251,12 @@ const App = () => {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/about" element={<About />} />
                     <Route path="/quote" element={<Quote />} />
+                    
+                    {/* Routes de commande */}
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
-                    <CartMergeDialog />
+                    <Route path="/checkout/success" element={<OrderConfirmation />} />
+
                     {/* Auth Routes */}
                     <Route path="/auth/login" element={<Login />} />
                     <Route path="/auth/register" element={<Register />} />
@@ -266,6 +271,7 @@ const App = () => {
                       <Route index element={<MyAccount />} />
                       <Route path="profile" element={<ProfileSettings />} />
                       <Route path="orders" element={<OrderHistory />} />
+                      <Route path="orders/:id" element={<OrderDetails />} />
                       <Route path="quotes" element={<QuoteDashboard />} />
                       <Route path="addresses" element={<Addresses />} />
                     </Route>
@@ -290,6 +296,7 @@ const App = () => {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                   <OfflineIndicator />
+                  <CartMergeDialog />
                 </BrowserRouter>
               </TooltipProvider>
             </WishlistProvider>

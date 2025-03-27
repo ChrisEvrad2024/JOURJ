@@ -1,18 +1,17 @@
 // src/pages/Cart.jsx
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Minus, Plus, X, ShoppingBag } from 'lucide-react';
 import { toast } from "sonner";
-import { useCart } from '../hooks/useCart';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
-import { useNavigate } from 'react-router-dom';
 
 const Cart = () => {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const { 
     cartItems = [], // Valeur par défaut si undefined
     cartTotal = 0,  // Valeur par défaut si undefined
@@ -21,7 +20,6 @@ const Cart = () => {
     clearCart = () => {}, // Fonction par défaut
     createOrder = async () => {} // Fonction par défaut
   } = useCart() || {}; // Ajouter || {} pour éviter l'erreur si useCart() renvoie undefined
-  
   
   const proceedToCheckout = async () => {
     if (!currentUser) {
@@ -48,11 +46,8 @@ const Cart = () => {
         duration: 5000,
       });
       
-      // Rediriger vers la page de confirmation
-      // Dans une application réelle, vous pourriez rediriger vers une page de paiement
-      setTimeout(() => {
-        window.location.href = `/account/orders?highlight=${order.id}`;
-      }, 1500);
+      // Rediriger vers la page de checkout
+      navigate('/checkout');
       
     } catch (error) {
       console.error('Error creating order:', error);
@@ -63,7 +58,6 @@ const Cart = () => {
     } finally {
       setIsProcessingOrder(false);
     }
-    navigate('/checkout');
   };
   
   return (
