@@ -1,4 +1,4 @@
-// src/App.tsx (mise à jour avec lazy loading)
+// src/App.tsx (mise à jour avec lazy loading et nouveaux composants)
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -94,7 +94,7 @@ const lazyWithErrorHandling = (importFunc) => {
 
 // Lazy-load des composants non critiques avec gestion d'erreur
 const Catalog = lazyWithErrorHandling(() => import('./pages/Catalog'));
-const ProductDetail = lazyWithErrorHandling(() => import('./pages/ProductDetail'));
+const ProductDetail = lazyWithErrorHandling(() => import('./pages/ProductDetailPage'));
 const Cart = lazyWithErrorHandling(() => import('./pages/Cart'));
 const Wishlist = lazyWithErrorHandling(() => import('./pages/Wishlist'));
 const Register = lazyWithErrorHandling(() => import('./pages/auth/Register'));
@@ -104,9 +104,18 @@ const MyAccount = lazyWithErrorHandling(() => import('./pages/account/MyAccount'
 const ProfileSettings = lazyWithErrorHandling(() => import('./pages/account/ProfileSettings'));
 const OrderHistory = lazyWithErrorHandling(() => import('./pages/account/OrderHistory'));
 const Addresses = lazyWithErrorHandling(() => import('./pages/account/Addresses'));
+
+// Admin Layout et Dashboard
 const AdminLayout = lazyWithErrorHandling(() => import('./components/layout/AdminLayout'));
 const AdminDashboard = lazyWithErrorHandling(() => import('./pages/admin/AdminDashboard'));
-const ProductsManagement = lazyWithErrorHandling(() => import('./pages/admin/ProductsManagement'));
+
+// Nouveaux composants de gestion des produits
+const AdminProducts = lazyWithErrorHandling(() => import('./pages/admin/AdminProducts'));
+const AdminProductDetail = lazyWithErrorHandling(() => import('./pages/admin/AdminProductDetail'));
+const AdminCategories = lazyWithErrorHandling(() => import('./pages/admin/AdminCategories'));
+const RestockProducts = lazyWithErrorHandling(() => import('./pages/admin/RestockProducts'));
+
+// Autres composants admin
 const BlogManagement = lazyWithErrorHandling(() => import('./pages/admin/BlogManagement'));
 const CustomersManagement = lazyWithErrorHandling(() => import('./pages/admin/CustomersManagement'));
 const Blog = lazyWithErrorHandling(() => import('./pages/Blog'));
@@ -283,7 +292,15 @@ const App = () => {
                       </ProtectedRoute>
                     }>
                       <Route index element={<AdminDashboard />} />
-                      <Route path="products" element={<ProductsManagement />} />
+                      
+                      {/* Routes de gestion des produits */}
+                      <Route path="products">
+                        <Route index element={<AdminProducts />} />
+                        <Route path=":id" element={<AdminProductDetail />} />
+                        <Route path="categories" element={<AdminCategories />} />
+                        <Route path="restock" element={<RestockProducts />} />
+                      </Route>
+                      
                       <Route path="blog" element={<BlogManagement />} />
                       <Route path="customers" element={<CustomersManagement />} />
                       <Route path="orders" element={<AdminOrdersManagement />} />

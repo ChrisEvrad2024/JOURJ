@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -21,37 +20,69 @@ const MyAccount = () => {
   const [userData, setUserData] = useState<any>(null);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [cartCount, setCartCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    // Get user data from localStorage
-    const user = localStorage.getItem("user");
-    if (user) {
+    const fetchData = async () => {
+      setIsLoading(true);
       try {
-        setUserData(JSON.parse(user));
+        // Get user data from localStorage
+        const user = localStorage.getItem("user");
+        if (user) {
+          try {
+            setUserData(JSON.parse(user));
+          } catch (error) {
+            console.error("Failed to parse user data:", error);
+          }
+        }
+        
+        // Get wishlist and cart counts synchronously
+        // Using our own function to get wishlist items since the export is missing
+        const getWishlistItems = (): WishlistItem[] => {
+          try {
+            const items = localStorage.getItem("wishlist");
+            return items ? JSON.parse(items) : [];
+          } catch (error) {
+            console.error("Failed to parse wishlist items:", error);
+            return [];
+          }
+        };
+        
+        // Make sure getCartItemCount() is not returning a promise
+        // If it is, you need to await it and handle accordingly
+        const currentCartCount = getCartItemCount();
+        
+        setWishlistCount(getWishlistItems().length);
+        setCartCount(typeof currentCartCount === 'number' ? currentCartCount : 0);
       } catch (error) {
-        console.error("Failed to parse user data:", error);
-      }
-    }
-    
-    // Get wishlist and cart counts
-    // Using our own function to get wishlist items since the export is missing
-    const getWishlistItems = (): WishlistItem[] => {
-      try {
-        const items = localStorage.getItem("wishlist");
-        return items ? JSON.parse(items) : [];
-      } catch (error) {
-        console.error("Failed to parse wishlist items:", error);
-        return [];
+        console.error("Error loading account data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    setWishlistCount(getWishlistItems().length);
-    setCartCount(getCartItemCount());
+    fetchData();
     
     // Update counts when localStorage changes
     const handleStorageChange = () => {
-      setWishlistCount(getWishlistItems().length);
-      setCartCount(getCartItemCount());
+      try {
+        const getWishlistItems = (): WishlistItem[] => {
+          try {
+            const items = localStorage.getItem("wishlist");
+            return items ? JSON.parse(items) : [];
+          } catch (error) {
+            console.error("Failed to parse wishlist items:", error);
+            return [];
+          }
+        };
+        
+        const currentCartCount = getCartItemCount();
+        
+        setWishlistCount(getWishlistItems().length);
+        setCartCount(typeof currentCartCount === 'number' ? currentCartCount : 0);
+      } catch (error) {
+        console.error("Error updating counts:", error);
+      }
     };
     
     window.addEventListener("storage", handleStorageChange);
@@ -97,11 +128,20 @@ const MyAccount = () => {
     }
   ];
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full py-12">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <span className="ml-3">Chargement...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Welcome section */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-serif">Bonjour, {userData?.firstName} 👋</h1>
+        <h1 className="text-2xl font-serif">Bonjour, {userData?.firstName || 'utilisateur'} 👋</h1>
         <p className="text-muted-foreground">
           Bienvenue dans votre espace personnel. Gérez vos informations, commandes et préférences.
         </p>

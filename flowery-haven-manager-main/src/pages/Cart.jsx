@@ -6,67 +6,40 @@ import Footer from '@/components/layout/Footer';
 import { Minus, Plus, X, ShoppingBag } from 'lucide-react';
 import { toast } from "sonner";
 import { useAuth } from '../contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
+import { useCart } from '@/contexts/CartContext'; // Utiliser le contexte plutôt que le hook
 
 const Cart = () => {
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const { 
+  const {
     cartItems = [], // Valeur par défaut si undefined
     cartTotal = 0,  // Valeur par défaut si undefined
-    updateItemQuantity = () => {}, // Fonction par défaut
-    removeFromCart = () => {}, // Fonction par défaut
-    clearCart = () => {}, // Fonction par défaut
-    createOrder = async () => {} // Fonction par défaut
+    updateItemQuantity = () => { }, // Fonction par défaut
+    removeFromCart = () => { }, // Fonction par défaut
+    clearCart = () => { } // Fonction par défaut
   } = useCart() || {}; // Ajouter || {} pour éviter l'erreur si useCart() renvoie undefined
-  
-  const proceedToCheckout = async () => {
+
+  // Simplifiez la fonction proceedToCheckout pour simplement naviguer vers la page de checkout
+  const proceedToCheckout = () => {
+    // Vérifier si l'utilisateur est connecté
     if (!currentUser) {
-      toast.error("Vous devez être connecté", {
-        description: "Veuillez vous connecter pour finaliser votre commande",
-        duration: 5000,
-      });
+      toast.error('Vous devez être connecté pour passer une commande');
       navigate('/auth/login');
       return;
     }
     
-    setIsProcessingOrder(true);
-    
-    try {
-      // Créer une commande à partir du panier
-      const order = await createOrder({
-        shippingMethod: "standard",
-        shippingCost: 7.90,
-        paymentMethod: "credit_card"
-      });
-      
-      toast.success("Commande créée avec succès", {
-        description: `Votre commande #${order.orderNumber} a été créée.`,
-        duration: 5000,
-      });
-      
-      // Rediriger vers la page de checkout
-      navigate('/checkout');
-      
-    } catch (error) {
-      console.error('Error creating order:', error);
-      toast.error("Échec de la commande", {
-        description: error.message || "Une erreur est survenue. Veuillez réessayer.",
-        duration: 5000,
-      });
-    } finally {
-      setIsProcessingOrder(false);
-    }
+    // Rediriger vers la page de checkout
+    navigate('/checkout');
   };
-  
+
   return (
     <>
       <Navbar />
       <main className="pt-32 pb-16 min-h-screen">
         <div className="section-container">
           <h1 className="text-3xl font-serif mb-8">Votre Panier</h1>
-          
+
           {!cartItems || cartItems.length === 0 ? (
             <div className="text-center py-12">
               <div className="inline-flex justify-center items-center p-6 bg-muted rounded-full mb-6">
@@ -98,10 +71,10 @@ const Cart = () => {
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               <Link to={`/product/${item.product.id}`} className="w-20 h-20 rounded-md overflow-hidden bg-muted">
-                                <img 
-                                  src={item.product.images[0]} 
-                                  alt={item.product.name} 
-                                  className="w-full h-full object-cover" 
+                                <img
+                                  src={item.product.images && item.product.images[0]}
+                                  alt={item.product.name}
+                                  className="w-full h-full object-cover"
                                 />
                               </Link>
                               <div>
@@ -114,7 +87,7 @@ const Cart = () => {
                           </td>
                           <td className="py-4 px-2">
                             <div className="flex items-center justify-center">
-                              <button 
+                              <button
                                 className="border border-border rounded-l-md p-2 hover:bg-muted transition-colors"
                                 onClick={() => updateItemQuantity(item.product.id, item.quantity - 1)}
                                 disabled={item.quantity <= 1}
@@ -124,7 +97,7 @@ const Cart = () => {
                               <div className="border-t border-b border-border px-4 py-1.5 flex items-center justify-center min-w-[40px]">
                                 {item.quantity}
                               </div>
-                              <button 
+                              <button
                                 className="border border-border rounded-r-md p-2 hover:bg-muted transition-colors"
                                 onClick={() => updateItemQuantity(item.product.id, item.quantity + 1)}
                                 disabled={item.product.stock !== undefined && item.quantity >= item.product.stock}
@@ -137,7 +110,7 @@ const Cart = () => {
                             {(item.product.price * item.quantity).toFixed(2)} XAF
                           </td>
                           <td className="py-4 px-6 text-right">
-                            <button 
+                            <button
                               className="text-muted-foreground hover:text-destructive p-2 transition-colors rounded-full hover:bg-muted"
                               onClick={() => removeFromCart(item.product.id)}
                               aria-label="Retirer du panier"
@@ -151,12 +124,12 @@ const Cart = () => {
                   </table>
                 </div>
               </div>
-              
+
               {/* Order Summary */}
               <div className="lg:col-span-1">
                 <div className="bg-background rounded-lg border border-border p-6">
                   <h2 className="text-xl font-serif mb-6">Récapitulatif</h2>
-                  
+
                   <div className="space-y-4 border-b border-border pb-6 mb-6">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Sous-total</span>
@@ -167,13 +140,13 @@ const Cart = () => {
                       <span className="font-medium">7.90 XAF</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-between mb-8">
                     <span className="text-lg">Total</span>
                     <span className="text-lg font-medium">{(cartTotal + 7.9).toFixed(2)} XAF</span>
                   </div>
-                  
-                  <button 
+
+                  <button
                     className="btn-primary w-full flex items-center justify-center gap-2"
                     onClick={proceedToCheckout}
                     disabled={isProcessingOrder}
@@ -187,10 +160,10 @@ const Cart = () => {
                       "Passer au paiement"
                     )}
                   </button>
-                  
+
                   <div className="mt-6">
-                    <Link 
-                      to="/catalog" 
+                    <Link
+                      to="/catalog"
                       className="text-primary hover:underline text-sm flex justify-center"
                     >
                       Continuer vos achats

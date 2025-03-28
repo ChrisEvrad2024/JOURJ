@@ -80,17 +80,22 @@ class WishlistService {
         }
     }
 
-    /**
-     * Ajoute un produit à la liste de souhaits
-     * @param {string} productId - ID du produit
-     * @returns {Promise<Object>} Élément ajouté
-     */
-    static async addToWishlist(productId) {
-        try {
-            // Vérifier si le produit existe
-            const product = await ProductService.getProductById(productId);
 
-            if (!product) {
+    /**
+     * Ajoute un produit à la liste de souhaits avec une meilleure gestion de l'espace de stockage
+     * @param {string|Object} product - Produit ou ID du produit à ajouter
+     * @returns {Promise<Object>} - Résultat de l'opération
+     */
+    static async addToWishlist(product) {
+        try {
+            // Déterminer si nous avons reçu un ID ou un objet produit
+            const productId = typeof product === 'object' ? product.id : product;
+            const productObject = typeof product === 'object' ? product : null;
+
+            // Récupérer les détails du produit si nous n'avons que l'ID
+            const productDetails = productObject || await ProductService.getProductById(productId);
+
+            if (!productDetails) {
                 throw new Error('Produit non trouvé');
             }
 
@@ -108,7 +113,7 @@ class WishlistService {
                 const newItem = {
                     id: uuidv4(),
                     userId: currentUser.id,
-                    productId,
+                    productId: productDetails.id,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
@@ -120,32 +125,61 @@ class WishlistService {
 
                 return {
                     ...newItem,
-                    product
+                    product: productDetails
                 };
             } else {
-                // Pour les utilisateurs non connectés, utiliser localStorage
+                // Pour les utilisateurs non connectés, utiliser localStorage avec stockage optimisé
                 const wishlistItems = StorageService.getLocalStorageItem(STORAGE_KEYS.WISHLIST, []);
 
-                const newItem = {
-                    id: uuidv4(),
-                    productId,
+                // Créer une version simplifiée du produit avec seulement les données essentielles
+                const compressedProduct = {
+                    id: productDetails.id,
+                    productId: productDetails.id, // Pour compatibilité avec la structure IndexedDB
+                    name: productDetails.name,
+                    price: productDetails.price,
+                    image: productDetails.images && productDetails.images.length > 0 ? productDetails.images[0] : null,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
 
-                wishlistItems.push(newItem);
+                // Limiter la taille de la wishlist si nécessaire
+                if (wishlistItems.length >= 50) {
+                    // Garder les 30 plus récents
+                    console.log('La liste des favoris est trop grande, troncature...');
+                    wishlistItems.splice(0, wishlistItems.length - 30);
+                }
+
+                // Ajouter le nouvel élément
+                wishlistItems.push(compressedProduct);
+
+                // Essayer de sauvegarder avec notre service amélioré
                 StorageService.setLocalStorageItem(STORAGE_KEYS.WISHLIST, wishlistItems);
 
                 // Déclencher un événement pour mettre à jour l'UI
                 window.dispatchEvent(new Event('wishlistUpdated'));
 
-                return {
-                    ...newItem,
-                    product
-                };
+                return compressedProduct;
             }
         } catch (error) {
-            console.error(`Erreur lors de l'ajout du produit ${productId} à la liste de souhaits:`, error);
+            console.error(`Erreur lors de l'ajout du produit à la liste de souhaits:`, error);
+
+            // Gestion des erreurs de quota
+            if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
+                // Si c'est une erreur de quota, essayer de nettoyer la wishlist et réessayer
+                try {
+                    const wishlistItems = StorageService.getLocalStorageItem(STORAGE_KEYS.WISHLIST, []);
+
+                    // Garder seulement les 10 derniers articles
+                    const limitedWishlist = wishlistItems.slice(-10);
+                    StorageService.setLocalStorageItem(STORAGE_KEYS.WISHLIST, limitedWishlist);
+
+                    console.warn('Wishlist tronquée en raison du dépassement de quota');
+                    return false;
+                } catch (cleanupError) {
+                    console.error('Impossible de nettoyer la wishlist:', cleanupError);
+                }
+            }
+
             throw error;
         }
     }

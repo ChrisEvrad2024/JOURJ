@@ -1,211 +1,181 @@
+// src/contexts/WishlistContext.jsx
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { toast } from 'sonner';
 
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import { getWishlist, removeFromWishlist, clearWishlist } from '@/lib/wishlist';
-import { addToCart } from '@/lib/cart';
-import { Heart, ShoppingBag, X, Trash2 } from 'lucide-react';
-import { toast } from "sonner";
-import { Button } from '@/components/ui/button';
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+const WishlistContext = createContext();
 
-const Wishlist = () => {
-  const [wishlistItems, setWishlistItems] = useState<any[]>([]);
-  
+export const WishlistProvider = ({ children }) => {
+  const [items, setItems] = useState([]);
+  const [wishlistCount, setWishlistCount] = useState(0);
+
+  // Chargement initial plus sécurisé
   useEffect(() => {
-    const loadWishlist = () => {
-      const items = getWishlist();
-      setWishlistItems(items);
+    try {
+      const storedWishlist = localStorage.getItem('wishlist');
+      if (storedWishlist) {
+        const parsedWishlist = JSON.parse(storedWishlist);
+        if (Array.isArray(parsedWishlist)) {
+          setItems(parsedWishlist);
+          setWishlistCount(parsedWishlist.length);
+        } else {
+          // Réinitialiser si le format n'est pas valide
+          localStorage.setItem('wishlist', JSON.stringify([]));
+          setItems([]);
+          setWishlistCount(0);
+        }
+      } else {
+        // Initialiser si vide
+        localStorage.setItem('wishlist', JSON.stringify([]));
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la wishlist:', error);
+      // En cas d'erreur, réinitialiser
+      try {
+        localStorage.setItem('wishlist', JSON.stringify([]));
+      } catch (storageError) {
+        console.error('Erreur lors de la réinitialisation de la wishlist:', storageError);
+        // Si l'erreur persiste, ne pas essayer de manipuler localStorage
+      }
+      setItems([]);
+      setWishlistCount(0);
+    }
+
+    // Écouter les événements de mise à jour
+    const handleWishlistUpdate = () => {
+      try {
+        const updatedWishlist = localStorage.getItem('wishlist') 
+          ? JSON.parse(localStorage.getItem('wishlist')) 
+          : [];
+        
+        if (Array.isArray(updatedWishlist)) {
+          setItems(updatedWishlist);
+          setWishlistCount(updatedWishlist.length);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour de la wishlist:', error);
+      }
     };
-    
-    loadWishlist();
-    
-    // Listen for storage events to update wishlist when it changes in another tab
-    window.addEventListener('storage', loadWishlist);
-    window.addEventListener('wishlistUpdated', loadWishlist);
-    
+
+    window.addEventListener('wishlistUpdated', handleWishlistUpdate);
+    window.addEventListener('storage', handleWishlistUpdate);
+
     return () => {
-      window.removeEventListener('storage', loadWishlist);
-      window.removeEventListener('wishlistUpdated', loadWishlist);
+      window.removeEventListener('wishlistUpdated', handleWishlistUpdate);
+      window.removeEventListener('storage', handleWishlistUpdate);
     };
   }, []);
-  
-  const handleRemoveItem = (id: string) => {
-    removeFromWishlist(id);
-    setWishlistItems(getWishlist());
-    toast.info("Produit retiré", {
-      description: "Le produit a été retiré de votre wishlist",
-      duration: 3000,
-    });
-  };
-  
-  const handleAddToCart = (item: any) => {
-    addToCart({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      images: [item.image],
-      description: "Ajouté depuis la wishlist", // Added required field
-      category: "unknown", // Added required field
-      popular: false // Added required field
-    }, 1);
-    
-    // Dispatch custom event to update cart count in navbar
-    window.dispatchEvent(new Event('cartUpdated'));
-    
-    toast.success("Produit ajouté", {
-      description: "Le produit a été ajouté à votre panier",
-      duration: 3000,
-    });
+
+  // Ajouter un produit à la wishlist
+  const addToWishlist = (product) => {
+    try {
+      // Vérifier si le produit existe déjà
+      const existingItem = items.find(item => item.id === product.id);
+      
+      if (!existingItem) {
+        // Compresser les données du produit
+        const compressedProduct = {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.images && product.images.length > 0 ? product.images[0] : null
+        };
+        
+        const newItems = [...items, compressedProduct];
+        
+        // Limiter la taille de la wishlist à 50 éléments maximum
+        const limitedItems = newItems.length > 50 ? newItems.slice(-50) : newItems;
+        
+        try {
+          localStorage.setItem('wishlist', JSON.stringify(limitedItems));
+          setItems(limitedItems);
+          setWishlistCount(limitedItems.length);
+          window.dispatchEvent(new Event('wishlistUpdated'));
+          toast.success('Produit ajouté à votre wishlist');
+          return true;
+        } catch (storageError) {
+          // Gestion des erreurs de quota dépassé
+          if (storageError.name === 'QuotaExceededError') {
+            const reducedItems = limitedItems.slice(-20); // Garder seulement 20 éléments
+            localStorage.setItem('wishlist', JSON.stringify(reducedItems));
+            setItems(reducedItems);
+            setWishlistCount(reducedItems.length);
+            toast.success('Produit ajouté à votre wishlist (liste limitée)');
+            return true;
+          } else {
+            throw storageError;
+          }
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout à la wishlist:', error);
+      toast.error('Erreur lors de l\'ajout à la wishlist');
+      return false;
+    }
   };
 
-  const handleClearWishlist = () => {
-    clearWishlist();
-    setWishlistItems([]);
-    toast.info("Wishlist vidée", {
-      description: "Tous les produits ont été retirés de votre wishlist",
-      duration: 3000,
-    });
+  // Supprimer un produit de la wishlist
+  const removeFromWishlist = (productId) => {
+    try {
+      const newItems = items.filter(item => item.id !== productId);
+      
+      localStorage.setItem('wishlist', JSON.stringify(newItems));
+      setItems(newItems);
+      setWishlistCount(newItems.length);
+      
+      window.dispatchEvent(new Event('wishlistUpdated'));
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la wishlist:', error);
+      toast.error('Erreur lors de la suppression de la wishlist');
+      return false;
+    }
   };
 
-  const handleAddAllToCart = () => {
-    wishlistItems.forEach(item => {
-      handleAddToCart(item);
-    });
-    
-    toast.success("Tous les produits ajoutés", {
-      description: "Tous les produits de votre wishlist ont été ajoutés au panier",
-      duration: 3000,
-    });
+  // Vider la wishlist
+  const clearWishlist = () => {
+    try {
+      localStorage.setItem('wishlist', JSON.stringify([]));
+      setItems([]);
+      setWishlistCount(0);
+      
+      window.dispatchEvent(new Event('wishlistUpdated'));
+      return true;
+    } catch (error) {
+      console.error('Erreur lors du vidage de la wishlist:', error);
+      toast.error('Erreur lors du vidage de la wishlist');
+      return false;
+    }
   };
-  
+
+  // Vérifier si un produit est dans la wishlist
+  const isInWishlist = (productId) => {
+    return items.some(item => item.id === productId);
+  };
+
   return (
-    <>
-      <Navbar />
-      <main className="pt-32 pb-16 min-h-screen">
-        <div className="section-container">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-serif">Votre Wishlist</h1>
-            {wishlistItems.length > 0 && (
-              <div className="flex gap-3">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleAddAllToCart}
-                  className="flex items-center gap-2"
-                >
-                  <ShoppingBag size={16} />
-                  <span>Tout ajouter au panier</span>
-                </Button>
-                
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Trash2 size={16} />
-                      <span>Vider la wishlist</span>
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Cette action va supprimer tous les produits de votre wishlist. 
-                        Cette action est irréversible.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearWishlist}>
-                        Confirmer
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-          </div>
-          
-          {wishlistItems.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="inline-flex justify-center items-center p-6 bg-muted rounded-full mb-6">
-                <Heart size={32} className="text-muted-foreground" />
-              </div>
-              <h2 className="text-xl font-serif mb-4">Votre wishlist est vide</h2>
-              <p className="text-muted-foreground mb-8">Ajoutez des produits à votre wishlist pour les retrouver plus tard.</p>
-              <Link to="/catalog" className="btn-primary inline-flex">
-                Découvrir nos produits
-              </Link>
-            </div>
-          ) : (
-            <>
-              <div className="bg-muted/40 p-4 rounded-lg mb-6 flex items-center">
-                <Heart size={18} className="text-primary mr-2" />
-                <span>
-                  <strong>{wishlistItems.length}</strong> {wishlistItems.length > 1 ? 'produits' : 'produit'} dans votre wishlist
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {wishlistItems.map((item) => (
-                  <div key={item.id} className="group relative bg-background border border-border rounded-lg overflow-hidden transition-all hover:shadow-md">
-                    <div className="absolute top-3 right-3 z-10 flex space-x-2">
-                      <button 
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="p-1.5 bg-white/80 backdrop-blur-sm rounded-full text-foreground hover:text-destructive transition-colors"
-                        aria-label="Retirer de la wishlist"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                    
-                    <Link to={`/product/${item.id}`} className="block aspect-square bg-muted">
-                      <img 
-                        src={item.image} 
-                        alt={item.name}
-                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      />
-                    </Link>
-                    
-                    <div className="p-4">
-                      <Link to={`/product/${item.id}`} className="block">
-                        <h3 className="font-medium mb-1 group-hover:text-primary transition-colors">{item.name}</h3>
-                      </Link>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="font-medium">{item.price.toFixed(2)} XAF</span>
-                        <button 
-                          onClick={() => handleAddToCart(item)}
-                          className="p-2 bg-primary/10 text-primary rounded-full hover:bg-primary hover:text-white transition-colors"
-                          aria-label="Ajouter au panier"
-                        >
-                          <ShoppingBag size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </main>
-      <Footer />
-    </>
+    <WishlistContext.Provider 
+      value={{ 
+        items, 
+        wishlistCount, 
+        addToWishlist, 
+        removeFromWishlist, 
+        clearWishlist, 
+        isInWishlist 
+      }}
+    >
+      {children}
+    </WishlistContext.Provider>
   );
 };
 
-export default Wishlist;
+export const useWishlist = () => {
+  const context = useContext(WishlistContext);
+  
+  if (context === undefined) {
+    throw new Error('useWishlist must be used within a WishlistProvider');
+  }
+  
+  return context;
+};

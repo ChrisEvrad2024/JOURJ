@@ -1,19 +1,18 @@
 // src/hooks/useOrders.js
 import { useState, useEffect, useCallback } from 'react';
-import { OrderService } from '@/services';
+import { toast } from 'sonner';
+import OrderService from '@/services/OrderService';
+import { CartService } from '@/services/CartService';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/hooks/useCart';
 
 /**
- * Hook personnalisé pour gérer les commandes de l'utilisateur
+ * Hook pour gérer les commandes utilisateur
  */
 export const useOrders = () => {
-    const { currentUser } = useAuth();
-    const { addToCart } = useCart();
-
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const { currentUser } = useAuth();
 
     // Charger les commandes de l'utilisateur
     const loadOrders = useCallback(async () => {
@@ -26,116 +25,82 @@ export const useOrders = () => {
         try {
             setLoading(true);
             setError(null);
-
             const userOrders = await OrderService.getUserOrders();
-
-            // Trier les commandes par date (plus récente en premier)
-            userOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
             setOrders(userOrders);
         } catch (err) {
             console.error('Erreur lors du chargement des commandes:', err);
-            setError('Impossible de charger vos commandes. Veuillez réessayer plus tard.');
+            setError('Impossible de charger vos commandes.');
         } finally {
             setLoading(false);
         }
     }, [currentUser]);
 
-    // Récupérer les commandes au chargement du composant
+    // Charger les commandes au chargement
     useEffect(() => {
         loadOrders();
     }, [loadOrders]);
 
-    /**
-     * Obtenir une commande par son ID
-     * @param {string} orderId - ID de la commande
-     * @returns {Promise<Object>} Détails de la commande
-     */
+    // Récupérer une commande par son ID
     const getOrderById = useCallback(async (orderId) => {
+        if (!currentUser) {
+            return null;
+        }
+
         try {
             return await OrderService.getOrderById(orderId);
         } catch (err) {
             console.error(`Erreur lors de la récupération de la commande ${orderId}:`, err);
             throw err;
         }
-    }, []);
+    }, [currentUser]);
 
-    /**
-     * Annuler une commande
-     * @param {string} orderId - ID de la commande
-     * @param {string} reason - Raison de l'annulation
-     * @returns {Promise<boolean>} Succès de l'opération
-     */
+    // Annuler une commande
     const cancelOrder = useCallback(async (orderId, reason) => {
+        if (!currentUser) {
+            throw new Error('Vous devez être connecté pour annuler une commande');
+        }
+
         try {
             await OrderService.cancelOrder(orderId, reason);
-
-            // Mettre à jour la liste des commandes
-            const updatedOrders = orders.map(order =>
-                order.id === orderId
-                    ? { ...order, status: 'cancelled', cancellationReason: reason }
-                    : order
-            );
-
-            setOrders(updatedOrders);
+            // Actualiser la liste après annulation
+            await loadOrders();
             return true;
         } catch (err) {
             console.error(`Erreur lors de l'annulation de la commande ${orderId}:`, err);
             throw err;
         }
-    }, [orders]);
+    }, [currentUser, loadOrders]);
 
-    /**
-     * Commander à nouveau les articles d'une commande précédente
-     * @param {Array} items - Articles à ajouter au panier
-     * @returns {Promise<boolean>} Succès de l'opération
-     */
+    // Commander à nouveau les articles d'une commande précédente
     const reorderItems = useCallback(async (items) => {
-        try {
-            if (!items || items.length === 0) {
-                throw new Error('Aucun article à commander');
-            }
+        if (!currentUser) {
+            throw new Error('Vous devez être connecté pour commander à nouveau');
+        }
 
+        try {
             // Ajouter chaque article au panier
             for (const item of items) {
-                await addToCart(item.productId, item.quantity);
+                await CartService.addToCart(item.productId, item.quantity);
             }
 
+            toast.success('Articles ajoutés au panier');
             return true;
         } catch (err) {
-            console.error('Erreur lors de la recommande des articles:', err);
+            console.error('Erreur lors de la commande à nouveau:', err);
+            toast.error('Erreur lors de l\'ajout au panier');
             throw err;
         }
-    }, [addToCart]);
-
-    /**
-     * Création d'une commande (à partir du panier)
-     * Cette fonction serait utilisée pour finaliser le panier
-     * @param {Object} orderData - Données de la commande
-     * @returns {Promise<Object>} Commande créée
-     */
-    const createOrder = useCallback(async (orderData) => {
-        try {
-            const newOrder = await OrderService.createOrder(orderData);
-
-            // Ajouter la nouvelle commande à la liste
-            setOrders(prevOrders => [newOrder, ...prevOrders]);
-
-            return newOrder;
-        } catch (err) {
-            console.error('Erreur lors de la création de la commande:', err);
-            throw err;
-        }
-    }, []);
+    }, [currentUser]);
 
     return {
         orders,
         loading,
         error,
+        loadOrders,
         getOrderById,
         cancelOrder,
-        reorderItems,
-        createOrder,
-        refreshOrders: loadOrders
+        reorderItems
     };
 };
+
+export default useOrders;

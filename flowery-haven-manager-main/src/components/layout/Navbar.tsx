@@ -152,9 +152,9 @@ export const Navbar = () => {
           </Link>
           <Link to="/cart" className="p-2 hover:text-primary transition-colors relative">
             <ShoppingBag size={20} />
-            {cartCount > 0 && (
+            {cartItems > 0 && (
               <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {cartCount > 99 ? '99+' : cartCount}
+                {cartItems > 99 ? '99+' : cartItems}
               </span>
             )}
           </Link>

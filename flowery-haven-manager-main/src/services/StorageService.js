@@ -42,7 +42,107 @@ class StorageService {
     }
 
     /**
-     * Sauvegarde des données dans localStorage
+     * Calcule la taille approximative d'une chaîne en octets
+     * @param {string} str - Chaîne à mesurer
+     * @returns {number} - Taille en octets
+     */
+    static getApproximateSize(str) {
+        // Une approximation basée sur l'encodage UTF-16 (2 octets par caractère)
+        return str ? str.length * 2 : 0;
+    }
+
+    /**
+     * Vérifie si l'espace est suffisant avant d'enregistrer des données
+     * @param {string} key - Clé de stockage
+     * @param {string} serializedData - Données sérialisées
+     * @returns {boolean} - True si l'espace est suffisant
+     */
+    static checkStorageSpace(key, serializedData) {
+        try {
+            // Calculer la taille des données à stocker
+            const dataSize = this.getApproximateSize(key) + this.getApproximateSize(serializedData);
+            
+            // Si la taille est supérieure à 1MB, c'est probablement trop grand pour localStorage
+            if (dataSize > 1024 * 1024) {
+                console.warn(`Tentative de stocker ${dataSize} octets dans localStorage, ce qui est probablement trop grand.`);
+                return false;
+            }
+
+            // Test pour voir si on peut stocker
+            localStorage.setItem(key, serializedData);
+            return true;
+        } catch (e) {
+            // Si une exception est levée, c'est probablement une erreur de quota
+            console.warn('Espace de stockage insuffisant:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Libère de l'espace dans localStorage en supprimant les éléments les moins importants
+     * @param {number} bytesNeeded - Espace approximatif nécessaire en octets
+     * @returns {boolean} - Vrai si l'espace a été libéré
+     */
+    static freeUpStorage(bytesNeeded) {
+        try {
+            // Liste des clés qui peuvent être supprimées si nécessaire, par ordre de priorité
+            const lowPriorityKeys = [
+                'recentProducts',  // Les produits récemment consultés sont moins critiques
+                'cache_', // Les données de cache sont régénérables
+            ];
+
+            let freedSpace = 0;
+
+            // Parcourir toutes les clés de localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                
+                // Vérifier si c'est une clé de basse priorité
+                const isLowPriority = lowPriorityKeys.some(prefix => key.startsWith(prefix));
+                
+                if (isLowPriority) {
+                    const value = localStorage.getItem(key);
+                    const size = this.getApproximateSize(key) + this.getApproximateSize(value);
+                    
+                    // Supprimer l'élément
+                    localStorage.removeItem(key);
+                    freedSpace += size;
+                    
+                    console.log(`Libéré ${size} octets en supprimant ${key}`);
+                    
+                    // Si on a libéré suffisamment d'espace, on s'arrête
+                    if (freedSpace >= bytesNeeded) {
+                        return true;
+                    }
+                }
+            }
+            
+            return freedSpace > 0;
+        } catch (e) {
+            console.error('Erreur lors de la libération d\'espace:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Tronque les données si elles sont trop volumineuses
+     * @param {Array|Object} data - Données à tronquer
+     * @returns {Array|Object} - Données tronquées
+     */
+    static truncateIfNeeded(data) {
+        // Si c'est un tableau, limiter sa taille
+        if (Array.isArray(data)) {
+            console.log('La liste des produits récents est trop grande, troncature...');
+            // Garder seulement les 3 premiers éléments
+            return data.slice(0, 3);
+        }
+        
+        // Si c'est un objet, on pourrait supprimer certaines propriétés, mais ici on le retourne tel quel
+        return data;
+    }
+
+    /**
+     * Sauvegarde des données dans localStorage avec gestion de l'espace
      * @param {string} key - Clé de stockage
      * @param {*} data - Données à stocker (seront sérialisées en JSON)
      */
@@ -53,8 +153,36 @@ class StorageService {
         }
 
         try {
+            // Tronquer les données si nécessaire pour certaines clés
+            if (key === 'recentProducts') {
+                data = this.truncateIfNeeded(data);
+            }
+            
             const serializedData = JSON.stringify(data);
-            localStorage.setItem(key, serializedData);
+            
+            // Essayer de stocker les données
+            if (!this.checkStorageSpace(key, serializedData)) {
+                // Si ça échoue, tenter de libérer de l'espace
+                const bytesNeeded = this.getApproximateSize(key) + this.getApproximateSize(serializedData);
+                const spaceFreed = this.freeUpStorage(bytesNeeded);
+                
+                // Nouvelle tentative après avoir libéré de l'espace
+                if (spaceFreed) {
+                    try {
+                        localStorage.setItem(key, serializedData);
+                        return;
+                    } catch (error) {
+                        // Si ça échoue encore, tronquer davantage les données
+                        if (Array.isArray(data) && data.length > 1) {
+                            this.setLocalStorageItem(key, data.slice(0, Math.max(1, Math.floor(data.length / 2))));
+                            return;
+                        }
+                    }
+                }
+                
+                // En dernier recours, journaliser l'erreur
+                console.error('Erreur lors de la sauvegarde dans localStorage:', new Error('QuotaExceededError: Impossible de stocker les données, quota dépassé'));
+            }
         } catch (error) {
             console.error('Erreur lors de la sauvegarde dans localStorage:', error);
         }

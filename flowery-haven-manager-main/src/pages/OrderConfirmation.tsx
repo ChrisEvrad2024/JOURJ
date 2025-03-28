@@ -27,34 +27,34 @@ const OrderConfirmation = () => {
         
         // Dans une application réelle, vous feriez un appel API pour récupérer les détails de la commande
         // Pour cette démonstration, nous utilisons des données fictives
-        const mockOrder = {
-          id: orderId,
-          orderNumber: `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
-          status: 'pending',
-          items: [
-            { id: '1', name: 'Bouquet Élégance Rose', price: 59.99, quantity: 1, total: 59.99 },
-            { id: '2', name: 'Orchidée Zen', price: 69.99, quantity: 2, total: 139.98 }
-          ],
-          subtotal: 199.97,
-          shippingFee: 7.90,
-          taxAmount: 39.99,
-          total: 247.86,
-          createdAt: new Date().toISOString(),
-          customerName: 'Jean Dupont',
-          customerEmail: 'jean.dupont@example.com',
-          shippingAddress: {
-            address1: '123 Rue de Paris',
-            address2: 'Apt 4B',
-            city: 'Paris',
-            postalCode: '75001',
-            country: 'France'
-          },
-          paymentMethod: 'credit_card',
-          shippingMethod: 'standard',
-          estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
-        };
+        // // const mockOrder = {
+        // //   id: orderId,
+        // //   orderNumber: `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
+        // //   status: 'pending',
+        // //   items: [
+        // //     { id: '1', name: 'Bouquet Élégance Rose', price: 59.99, quantity: 1, total: 59.99 },
+        // //     { id: '2', name: 'Orchidée Zen', price: 69.99, quantity: 2, total: 139.98 }
+        // //   ],
+        // //   subtotal: 199.97,
+        // //   shippingFee: 7.90,
+        // //   taxAmount: 39.99,
+        // //   total: 247.86,
+        // //   createdAt: new Date().toISOString(),
+        // //   customerName: 'Jean Dupont',
+        // //   customerEmail: 'jean.dupont@example.com',
+        // //   shippingAddress: {
+        // //     address1: '123 Rue de Paris',
+        // //     address2: 'Apt 4B',
+        // //     city: 'Paris',
+        // //     postalCode: '75001',
+        // //     country: 'France'
+        // //   },
+        // //   paymentMethod: 'credit_card',
+        // //   shippingMethod: 'standard',
+        // //   estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+        // // };
         
-        setOrder(mockOrder);
+        // setOrder(mockOrder);
       } catch (error) {
         console.error("Error fetching order:", error);
         setError("Impossible de récupérer les détails de la commande");

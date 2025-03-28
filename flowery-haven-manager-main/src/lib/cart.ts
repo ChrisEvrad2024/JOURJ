@@ -53,13 +53,21 @@ export function saveAnonymousCart(cart: CartItem[]): void {
  */
 export function addToAnonymousCart(product: Product, quantity: number = 1): boolean {
   try {
+    // Vérifier que product est défini et a un ID
+    if (!product || !product.id) {
+      console.error("Invalid product provided to addToAnonymousCart");
+      return false;
+    }
+    
     // Vérifier si le produit est en stock
     if (product.stock !== undefined && product.stock < quantity) {
       throw new Error("Stock insuffisant");
     }
     
     const cart = getAnonymousCart();
-    const existingItemIndex = cart.findIndex((item) => item.product.id === product.id);
+    const existingItemIndex = cart.findIndex((item) => 
+      item && item.product && item.product.id === product.id
+    );
 
     if (existingItemIndex !== -1) {
       // Si le produit existe déjà, mettre à jour la quantité
@@ -104,15 +112,30 @@ export async function getUserCart(userId: string): Promise<CartItem[]> {
     // Enrichir avec les détails des produits
     const enrichedItems = await Promise.all(
       cartItems.map(async (item) => {
-        const product = await ProductService.getProductById(item.productId);
-        return {
-          ...item,
-          product
-        };
+        try {
+          const product = await ProductService.getProductById(item.productId);
+          
+          // Vérifier que le produit existe
+          if (!product) {
+            console.warn(`Product with ID ${item.productId} not found`);
+            return null; // Marquer pour filtrage ultérieur
+          }
+          
+          return {
+            ...item,
+            product
+          };
+        } catch (error) {
+          console.error(`Failed to fetch product details for ID ${item.productId}:`, error);
+          return null; // Marquer pour filtrage ultérieur
+        }
       })
     );
     
-    return enrichedItems;
+    // Filtrer les éléments sans produit valide
+    const validItems = enrichedItems.filter(item => item !== null);
+    
+    return validItems;
   } catch (error) {
     console.error("Failed to get user cart from database:", error);
     return [];
@@ -124,6 +147,12 @@ export async function getUserCart(userId: string): Promise<CartItem[]> {
  */
 export async function addToUserCart(userId: string, product: Product, quantity: number = 1): Promise<boolean> {
   try {
+    // Vérifier que product est défini et a un ID
+    if (!product || !product.id) {
+      console.error("Invalid product provided to addToUserCart");
+      return false;
+    }
+    
     // Vérifier si le produit est en stock
     if (product.stock !== undefined && product.stock < quantity) {
       throw new Error("Stock insuffisant");
@@ -131,7 +160,9 @@ export async function addToUserCart(userId: string, product: Product, quantity: 
     
     // Vérifier si le produit existe déjà dans le panier
     const userCart = await getUserCart(userId);
-    const existingItem = userCart.find(item => item.product.id === product.id);
+    const existingItem = userCart.find(item => 
+      item && item.product && item.product.id === product.id
+    );
     
     if (existingItem) {
       // Mettre à jour la quantité
@@ -208,6 +239,12 @@ export function getCart(): CartItem[] | Promise<CartItem[]> {
  * Ajoute un produit au panier
  */
 export function addToCart(product: Product, quantity: number = 1): boolean | Promise<boolean> {
+  // Vérifier que product est défini et a un ID
+  if (!product || !product.id) {
+    console.error("Invalid product provided to addToCart");
+    return false;
+  }
+  
   const currentUser = AuthService.getCurrentUser();
   
   if (currentUser) {
@@ -223,14 +260,21 @@ export function addToCart(product: Product, quantity: number = 1): boolean | Pro
  * Supprime un produit du panier
  */
 export async function removeFromCart(productId: string): Promise<boolean> {
+  if (!productId) {
+    console.error("Invalid productId provided to removeFromCart");
+    return false;
+  }
+  
   const currentUser = AuthService.getCurrentUser();
   
   if (currentUser) {
     try {
       const userCart = await getUserCart(currentUser.id);
-      const itemToRemove = userCart.find(item => item.product.id === productId);
+      const itemToRemove = userCart.find(item => 
+        item && item.product && item.product.id === productId
+      );
       
-      if (itemToRemove) {
+      if (itemToRemove && itemToRemove.id) {
         await DbService.delete(STORES.CART_ITEMS, itemToRemove.id);
         window.dispatchEvent(new Event('cartUpdated'));
       }
@@ -243,7 +287,9 @@ export async function removeFromCart(productId: string): Promise<boolean> {
   } else {
     try {
       const cart = getAnonymousCart();
-      const updatedCart = cart.filter((item) => item.product.id !== productId);
+      const updatedCart = cart.filter((item) => 
+        !(item && item.product && item.product.id === productId)
+      );
       saveAnonymousCart(updatedCart);
       return true;
     } catch (error) {
@@ -257,6 +303,11 @@ export async function removeFromCart(productId: string): Promise<boolean> {
  * Met à jour la quantité d'un produit dans le panier
  */
 export async function updateCartItemQuantity(productId: string, quantity: number): Promise<boolean> {
+  if (!productId) {
+    console.error("Invalid productId provided to updateCartItemQuantity");
+    return false;
+  }
+  
   if (quantity <= 0) {
     return removeFromCart(productId);
   }
@@ -266,7 +317,9 @@ export async function updateCartItemQuantity(productId: string, quantity: number
   if (currentUser) {
     try {
       const userCart = await getUserCart(currentUser.id);
-      const itemToUpdate = userCart.find(item => item.product.id === productId);
+      const itemToUpdate = userCart.find(item => 
+        item && item.product && item.product.id === productId
+      );
       
       if (!itemToUpdate) {
         throw new Error("Produit non trouvé dans le panier");
@@ -293,7 +346,9 @@ export async function updateCartItemQuantity(productId: string, quantity: number
   } else {
     try {
       const cart = getAnonymousCart();
-      const itemIndex = cart.findIndex((item) => item.product.id === productId);
+      const itemIndex = cart.findIndex((item) => 
+        item && item.product && item.product.id === productId
+      );
       
       if (itemIndex === -1) {
         throw new Error("Produit non trouvé dans le panier");
@@ -301,7 +356,7 @@ export async function updateCartItemQuantity(productId: string, quantity: number
       
       // Vérifier le stock
       const product = cart[itemIndex].product;
-      if (product.stock !== undefined && product.stock < quantity) {
+      if (product && product.stock !== undefined && product.stock < quantity) {
         throw new Error("Stock insuffisant");
       }
       
@@ -335,7 +390,9 @@ export async function transferAnonymousCartToUser(anonymousCart: CartItem[], use
   try {
     // Ajouter chaque élément au panier utilisateur
     for (const item of anonymousCart) {
-      await addToUserCart(userId, item.product, item.quantity);
+      if (item && item.product && item.product.id) {
+        await addToUserCart(userId, item.product, item.quantity);
+      }
     }
     
     // Vider le panier anonyme
@@ -356,11 +413,17 @@ export async function mergeCartItems(anonymousCart: CartItem[], savedCart: CartI
     // Créer un dictionnaire des éléments du panier utilisateur pour un accès plus rapide
     const userCartDict = {};
     savedCart.forEach(item => {
-      userCartDict[item.product.id] = item;
+      if (item && item.product && item.product.id) {
+        userCartDict[item.product.id] = item;
+      }
     });
     
     // Parcourir le panier anonyme
     for (const anonymousItem of anonymousCart) {
+      if (!anonymousItem || !anonymousItem.product || !anonymousItem.product.id) {
+        continue; // Ignorer les éléments invalides
+      }
+      
       const productId = anonymousItem.product.id;
       
       if (userCartDict[productId]) {
@@ -401,7 +464,13 @@ export async function getCartTotal(): Promise<number> {
   const cart = await getCart();
   
   if (Array.isArray(cart)) {
-    return cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    return cart.reduce((total, item) => {
+      // Vérifier si l'item et son produit existent et ont un prix
+      if (item && item.product && typeof item.product.price === 'number') {
+        return total + item.product.price * item.quantity;
+      }
+      return total;
+    }, 0);
   }
   
   return 0;
@@ -414,7 +483,12 @@ export async function getCartItemCount(): Promise<number> {
   const cart = await getCart();
   
   if (Array.isArray(cart)) {
-    return cart.reduce((count, item) => count + item.quantity, 0);
+    return cart.reduce((count, item) => {
+      if (item && typeof item.quantity === 'number') {
+        return count + item.quantity;
+      }
+      return count;
+    }, 0);
   }
   
   return 0;
@@ -424,10 +498,14 @@ export async function getCartItemCount(): Promise<number> {
  * Vérifie si un produit est dans le panier
  */
 export async function isProductInCart(productId: string): Promise<boolean> {
+  if (!productId) {
+    return false;
+  }
+  
   const cart = await getCart();
   
   if (Array.isArray(cart)) {
-    return cart.some(item => item.product.id === productId);
+    return cart.some(item => item && item.product && item.product.id === productId);
   }
   
   return false;
@@ -437,10 +515,14 @@ export async function isProductInCart(productId: string): Promise<boolean> {
  * Obtient un élément spécifique du panier
  */
 export async function getCartItem(productId: string): Promise<CartItem | undefined> {
+  if (!productId) {
+    return undefined;
+  }
+  
   const cart = await getCart();
   
   if (Array.isArray(cart)) {
-    return cart.find(item => item.product.id === productId);
+    return cart.find(item => item && item.product && item.product.id === productId);
   }
   
   return undefined;
@@ -465,10 +547,17 @@ export async function createOrderFromCart(orderDetails: any): Promise<any> {
       throw new Error("Le panier est vide");
     }
     
-    // Ici, vous feriez normalement un appel API pour créer la commande
-    // Pour notre exemple, nous allons simuler une réponse
+    // Filtrer les éléments valides du panier
+    const validCartItems = cart.filter(item => 
+      item && item.product && typeof item.product.price === 'number'
+    );
     
-    const orderItems = cart.map(item => ({
+    if (validCartItems.length === 0) {
+      throw new Error("Le panier ne contient pas d'éléments valides");
+    }
+    
+    // Utiliser uniquement les éléments valides
+    const orderItems = validCartItems.map(item => ({
       productId: item.product.id,
       name: item.product.name,
       price: item.product.price,
@@ -476,7 +565,10 @@ export async function createOrderFromCart(orderDetails: any): Promise<any> {
       total: item.product.price * item.quantity
     }));
     
-    const subtotal = cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    const subtotal = validCartItems.reduce((total, item) => 
+      total + item.product.price * item.quantity, 0
+    );
+    
     const shippingFee = getShippingFee(subtotal);
     
     const order = {
@@ -491,8 +583,6 @@ export async function createOrderFromCart(orderDetails: any): Promise<any> {
       createdAt: new Date().toISOString()
     };
     
-    // Dans une application réelle, vous enregistreriez la commande dans la base de données
-    
     // Vider le panier après création de la commande
     await clearCart();
     
@@ -500,5 +590,50 @@ export async function createOrderFromCart(orderDetails: any): Promise<any> {
   } catch (error) {
     console.error("Error creating order from cart:", error);
     throw error;
+  }
+}
+
+/**
+ * Nettoie les éléments corrompus du panier
+ */
+export async function cleanupCart(): Promise<void> {
+  const currentUser = AuthService.getCurrentUser();
+  
+  if (currentUser) {
+    // Utilisateur connecté - nettoyer IndexedDB
+    try {
+      const cartItems = await DbService.getByIndex(STORES.CART_ITEMS, 'userId', currentUser.id);
+      
+      for (const item of cartItems) {
+        try {
+          // Vérifier si le produit existe
+          const product = await ProductService.getProductById(item.productId);
+          
+          if (!product) {
+            // Supprimer les éléments sans produit valide
+            await DbService.delete(STORES.CART_ITEMS, item.id);
+          }
+        } catch (error) {
+          // Supprimer les éléments qui causent des erreurs
+          await DbService.delete(STORES.CART_ITEMS, item.id);
+        }
+      }
+      
+      window.dispatchEvent(new Event('cartUpdated'));
+    } catch (error) {
+      console.error("Failed to cleanup user cart:", error);
+    }
+  } else {
+    // Utilisateur anonyme - nettoyer localStorage
+    try {
+      const cart = getAnonymousCart();
+      const validCart = cart.filter(item => item && item.product && item.product.id);
+      
+      if (validCart.length !== cart.length) {
+        saveAnonymousCart(validCart);
+      }
+    } catch (error) {
+      console.error("Failed to cleanup anonymous cart:", error);
+    }
   }
 }

@@ -10,13 +10,26 @@ import {
   BarChart3,
   LogOut,
   Menu,
-  AlertCircle,
+  AlertTriangle,
   Home,
-  ArrowLeft
+  ArrowLeft,
+  Tag,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 const AdminLayout = () => {
@@ -25,6 +38,14 @@ const AdminLayout = () => {
   const [isAdmin, setIsAdmin] = useState(true); // Always set to true to bypass auth check
   const [isLoading, setIsLoading] = useState(false); // Set to false to skip loading state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProductsOpen, setIsProductsOpen] = useState(false);
+
+  // Check if current route is in products section
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin/products')) {
+      setIsProductsOpen(true);
+    }
+  }, [location.pathname]);
 
   // Authentication check is now disabled
   useEffect(() => {
@@ -51,9 +72,26 @@ const AdminLayout = () => {
       icon: <LayoutDashboard size={18} /> 
     },
     { 
-      label: "Produits", 
-      href: "/admin/products", 
-      icon: <PackageOpen size={18} /> 
+      label: "Produits",
+      icon: <PackageOpen size={18} />,
+      isCollapsible: true,
+      children: [
+        { 
+          label: "Tous les produits", 
+          href: "/admin/products",
+          icon: <PackageOpen size={16} /> 
+        },
+        { 
+          label: "Catégories", 
+          href: "/admin/products/categories",
+          icon: <Tag size={16} /> 
+        },
+        { 
+          label: "Réapprovisionnement", 
+          href: "/admin/products/restock",
+          icon: <RefreshCw size={16} /> 
+        }
+      ]
     },
     { 
       label: "Commandes", 
@@ -92,19 +130,48 @@ const AdminLayout = () => {
       <Separator />
       
       <nav className="space-y-1 px-3 py-2">
-        {navigationItems.map((item) => (
-          <Link 
-            key={item.href} 
-            to={item.href}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted w-full transition-colors ${
-              location.pathname === item.href ? "bg-muted font-medium" : ""
-            }`}
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </Link>
-        ))}
+        {navigationItems.map((item) => 
+          item.isCollapsible ? (
+            <Collapsible 
+              key={item.label}
+              open={isProductsOpen}
+              onOpenChange={setIsProductsOpen}
+              className="w-full"
+            >
+              <CollapsibleTrigger className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted w-full transition-colors text-left">
+                {item.icon}
+                <span>{item.label}</span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pl-9 space-y-1 mt-1">
+                {item.children?.map((child) => (
+                  <Link 
+                    key={child.href} 
+                    to={child.href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted w-full transition-colors ${
+                      location.pathname === child.href ? "bg-muted/80 font-medium" : ""
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {child.icon}
+                    <span>{child.label}</span>
+                  </Link>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <Link 
+              key={item.href} 
+              to={item.href}
+              className={`flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted w-full transition-colors ${
+                location.pathname === item.href ? "bg-muted font-medium" : ""
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </Link>
+          )
+        )}
         <Separator className="my-2" />
         
         {/* Bouton Retour au site */}

@@ -1,27 +1,40 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
-  StatisticsWidget, 
-  KpiCard 
-} from "@/components/admin/StatisticsWidget";
-import { 
-  ShoppingBag, 
+  LayoutDashboard, 
+  PackageOpen, 
   Users, 
-  CreditCard, 
+  ShoppingBag, 
+  CreditCard,
   Package,
   TrendingUp,
   Calendar,
   Truck,
   ArrowUpRight,
+  ArrowUp,
+  ArrowDown,
   AlertCircle,
+  AlertTriangle,
   ClipboardList,
-  Clock
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { getAllProducts } from "@/lib/data";
-import { Product } from "@/types/product";
+  Clock,
+  BarChart3,
+  FileText
+} from 'lucide-react';
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+
 import {
   Table,
   TableBody,
@@ -30,32 +43,83 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+import { 
+  StatisticsWidget, 
+  KpiCard 
+} from "@/components/admin/StatisticsWidget";
+
 import { 
   LowStockProductsCard, 
   PendingQuoteRequestsCard,
   AdminNotifications 
 } from "@/components/admin/AdminDashboardAlerts";
 
+import StockAlerts from '@/components/admin/StockAlerts';
+import ProductService from '@/services/ProductService';
+import OrderService from '@/services/OrderService';
+
 const AdminDashboard = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
-  const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [outOfStockProducts, setOutOfStockProducts] = useState(0);
+  const [recentSales, setRecentSales] = useState(0);
+  const [salesChange, setSalesChange] = useState(0);
+  const [salesChangeType, setSalesChangeType] = useState('up');
   
   useEffect(() => {
-    // Load data
-    const products = getAllProducts();
-    setTotalProducts(products.length);
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch products data
+        let products = [];
+        try {
+          products = await ProductService.getAllProducts();
+        } catch (error) {
+          console.warn('Error fetching from ProductService, using fallback data:', error);
+          // Fallback: directly get products if service fails
+          products = getAllProducts();
+        }
+        
+        setTotalProducts(products.length);
+        
+        // Filter low stock products (stock < 5)
+        const lowStockCount = products.filter(p => p.stock !== undefined && p.stock > 0 && p.stock <= 5);
+        setLowStockProducts(lowStockCount);
+        
+        // Count out of stock products
+        const outOfStockCount = products.filter(p => p.stock !== undefined && p.stock === 0).length;
+        setOutOfStockProducts(outOfStockCount);
+        
+        // In a real application, this would come from an API
+        setTotalOrders(124);
+        setTotalCustomers(128);
+        setTotalRevenue(7845.50);
+        setRecentSales(1875600);
+        setSalesChange(12.5);
+        setSalesChangeType('up');
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Filter low stock products (stock < 5)
-    setLowStockProducts(products.filter(product => product.stock !== undefined && product.stock < 5));
-    
-    // This would come from an API in a real application
-    setTotalOrders(124);
-    setTotalCustomers(85);
-    setTotalRevenue(7845.50);
+    fetchDashboardData();
   }, []);
+  
+  // Format currency in XAF
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XAF',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
   
   // Sales data for charts
   const monthlySales = [
@@ -105,11 +169,25 @@ const AdminDashboard = () => {
     { id: 'QUO-003', customer: 'Restaurant Le Gourmet', date: '2023-06-03', type: 'Décoration', status: 'En attente' },
   ];
 
+  // Render loading spinner
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full py-12">
+        <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+        <span className="ml-3 text-lg">Chargement du tableau de bord...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Tableau de bord</h1>
-        <p className="text-muted-foreground">Bienvenue sur le tableau de bord de votre boutique ChezFLORA.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Tableau de bord</h1>
+          <p className="text-muted-foreground">
+            Bienvenue sur le tableau de bord de votre boutique ChezFLORA.
+          </p>
+        </div>
       </div>
       
       <Tabs defaultValue="general" className="space-y-4">
@@ -118,46 +196,89 @@ const AdminDashboard = () => {
           <TabsTrigger value="sales">Ventes</TabsTrigger>
           <TabsTrigger value="products">Produits</TabsTrigger>
           <TabsTrigger value="customers">Clients</TabsTrigger>
+          <TabsTrigger value="analytics">Analytiques</TabsTrigger>
+          <TabsTrigger value="reports">Rapports</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general" className="space-y-4">
           {/* KPI Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard 
-              title="Ventes totales" 
-              value={`${totalRevenue.toFixed(2)} XAF`} 
-              icon={<CreditCard className="h-5 w-5 text-muted-foreground" />}
-              change="12.5%"
-              changeType="increase"
-              changeLabel="vs mois dernier"
-            />
-            <KpiCard 
-              title="Commandes" 
-              value={totalOrders} 
-              icon={<ShoppingBag className="h-5 w-5 text-muted-foreground" />}
-              change="5.2%"
-              changeType="increase"
-              changeLabel="vs mois dernier"
-            />
-            <KpiCard 
-              title="Clients" 
-              value={totalCustomers} 
-              icon={<Users className="h-5 w-5 text-muted-foreground" />}
-              change="8.1%"
-              changeType="increase"
-              changeLabel="vs mois dernier"
-            />
-            <KpiCard 
-              title="Produits" 
-              value={totalProducts} 
-              icon={<Package className="h-5 w-5 text-muted-foreground" />}
-              change="2"
-              changeType="increase"
-              changeLabel="nouveaux"
-            />
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Ventes récentes
+                </CardTitle>
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(recentSales)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {salesChangeType === 'up' ? (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <ArrowUp className="h-3 w-3" /> +{salesChange}%
+                    </span>
+                  ) : (
+                    <span className="text-red-600 flex items-center gap-1">
+                      <ArrowDown className="h-3 w-3" /> -{salesChange}%
+                    </span>
+                  )}
+                  <span className="ml-1">par rapport au mois dernier</span>
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Commandes
+                </CardTitle>
+                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  5.2% d'augmentation
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Clients
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalCustomers}</div>
+                <p className="text-xs text-muted-foreground">
+                  Clients inscrits
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Produits
+                </CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalProducts}</div>
+                <p className="text-xs text-muted-foreground">
+                  {outOfStockProducts > 0 && (
+                    <span className="text-amber-600 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {outOfStockProducts} en rupture, {lowStockProducts.length} en stock faible
+                    </span>
+                  )}
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* New Sections: Recent Orders, Low Stock, Pending Quotes */}
+          {/* Recent Orders and Pending Quotes */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             {/* Recent Orders */}
             <Card>
@@ -172,8 +293,8 @@ const AdminDashboard = () => {
                       Les dernières commandes reçues
                     </CardDescription>
                   </div>
-                  <Button size="sm" variant="outline">
-                    Voir tout
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to="/admin/orders">Voir tout</Link>
                   </Button>
                 </div>
               </CardHeader>
@@ -188,7 +309,7 @@ const AdminDashboard = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentOrdersData.slice(0, 4).map((order, index) => (
+                    {recentOrdersData.map((order, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">{order.id}</TableCell>
                         <TableCell>{order.customer}</TableCell>
@@ -216,10 +337,47 @@ const AdminDashboard = () => {
           {/* Low Stock Products */}
           <LowStockProductsCard products={lowStockProducts} />
           
-          {/* Notifications */}
+          {/* Quick Access */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Accès rapides</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Button asChild variant="outline" className="h-20 justify-start" size="lg">
+                  <Link to="/admin/products" className="flex flex-col items-center justify-center w-full h-full gap-1">
+                    <PackageOpen className="h-6 w-6" />
+                    <span>Gérer les produits</span>
+                  </Link>
+                </Button>
+                
+                <Button asChild variant="outline" className="h-20 justify-start" size="lg">
+                  <Link to="/admin/products/restock" className="flex flex-col items-center justify-center w-full h-full gap-1">
+                    <AlertTriangle className="h-6 w-6" />
+                    <span>Réapprovisionner</span>
+                  </Link>
+                </Button>
+                
+                <Button asChild variant="outline" className="h-20 justify-start" size="lg">
+                  <Link to="/admin/orders" className="flex flex-col items-center justify-center w-full h-full gap-1">
+                    <ShoppingBag className="h-6 w-6" />
+                    <span>Commandes</span>
+                  </Link>
+                </Button>
+                
+                <Button asChild variant="outline" className="h-20 justify-start" size="lg">
+                  <Link to="/admin/analytics" className="flex flex-col items-center justify-center w-full h-full gap-1">
+                    <BarChart3 className="h-6 w-6" />
+                    <span>Statistiques</span>
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              {/* Charts Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <StatisticsWidget 
                   title="Ventes mensuelles (XAF)" 
@@ -242,7 +400,6 @@ const AdminDashboard = () => {
             </div>
           </div>
           
-          {/* Second Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <StatisticsWidget 
               title="Commandes hebdomadaires" 
@@ -258,6 +415,50 @@ const AdminDashboard = () => {
               chartType="pie"
             />
           </div>
+        </TabsContent>
+        
+        <TabsContent value="sales" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <KpiCard 
+              title="Ventes aujourd'hui" 
+              value="475.25 XAF" 
+              icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />}
+              change="12.5%"
+              changeType="increase"
+              changeLabel="vs hier"
+            />
+            <KpiCard 
+              title="Commandes en attente" 
+              value="8" 
+              icon={<Calendar className="h-5 w-5 text-muted-foreground" />}
+            />
+            <KpiCard 
+              title="Livraisons en cours" 
+              value="6" 
+              icon={<Truck className="h-5 w-5 text-muted-foreground" />}
+              change="2"
+              changeType="increase"
+              changeLabel="nouvelles"
+            />
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Analyse des ventes</CardTitle>
+              <CardDescription>Consultez les indicateurs détaillés des ventes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <StatisticsWidget 
+                  title="" 
+                  data={monthlySales} 
+                  color="#22c55e"
+                  valuePrefix="XAF"
+                  chartType="line"
+                />
+              </div>
+            </CardContent>
+          </Card>
           
           {/* Recent Orders Table (Full) */}
           <Card>
@@ -301,50 +502,6 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="sales" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            <KpiCard 
-              title="Ventes aujourd'hui" 
-              value="475.25 XAF" 
-              icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />}
-              change="12.5%"
-              changeType="increase"
-              changeLabel="vs hier"
-            />
-            <KpiCard 
-              title="Commandes en attente" 
-              value="8" 
-              icon={<Calendar className="h-5 w-5 text-muted-foreground" />}
-            />
-            <KpiCard 
-              title="Livraisons en cours" 
-              value="6" 
-              icon={<Truck className="h-5 w-5 text-muted-foreground" />}
-              change="2"
-              changeType="increase"
-              changeLabel="nouvelles"
-            />
-          </div>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Analyse des ventes</CardTitle>
-              <CardDescription>Consultez les indicateurs détaillés des ventes.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                <StatisticsWidget 
-                  title="" 
-                  data={monthlySales} 
-                  color="#22c55e"
-                  valuePrefix="XAF"
-                  chartType="line"
-                />
               </div>
             </CardContent>
           </Card>
@@ -399,6 +556,9 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
+          
+          {/* Low Stock Products Section */}
+          <StockAlerts lowStockThreshold={5} maxItems={5} />
         </TabsContent>
         
         <TabsContent value="customers" className="space-y-4">
@@ -430,6 +590,78 @@ const AdminDashboard = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Analytiques</CardTitle>
+              <CardDescription>
+                Visualisez les performances de votre boutique
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <StatisticsWidget 
+                  title="Ventes mensuelles (XAF)" 
+                  data={monthlySales} 
+                  color="#22c55e"
+                  valuePrefix="XAF"
+                  chartType="line"
+                />
+                <StatisticsWidget 
+                  title="Sources clients" 
+                  data={customerSources} 
+                  color="#8b5cf6"
+                  valueSuffix="%"
+                  chartType="pie"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="reports" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Rapports</CardTitle>
+              <CardDescription>
+                Téléchargez les rapports de votre boutique
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-2">
+                    <FileText className="h-8 w-8 mb-1" />
+                    <span>Rapport des ventes</span>
+                    <span className="text-xs text-muted-foreground">Juin 2023</span>
+                  </Button>
+                  
+                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-2">
+                    <Users className="h-8 w-8 mb-1" />
+                    <span>Rapport clients</span>
+                    <span className="text-xs text-muted-foreground">Juin 2023</span>
+                  </Button>
+                  
+                  <Button variant="outline" className="h-24 flex flex-col items-center justify-center gap-2">
+                    <Package className="h-8 w-8 mb-1" />
+                    <span>Inventaire produits</span>
+                    <span className="text-xs text-muted-foreground">Juin 2023</span>
+                  </Button>
+                </div>
+                
+                <Separator />
+                
+                <div>
+                  <h3 className="text-lg font-medium mb-3">Rapports programmés</h3>
+                  <p className="text-muted-foreground">
+                    Les rapports automatiques seront disponibles prochainement.
+                  </p>
                 </div>
               </div>
             </CardContent>

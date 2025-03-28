@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import ImageUpload from "./ImageUpload";
 import {
   Select,
   SelectContent,
@@ -61,7 +61,6 @@ interface ProductFormProps {
 
 export function ProductForm({ product, categories, onSubmit, onCancel }: ProductFormProps) {
   const [images, setImages] = useState<string[]>(product?.images || []);
-  const [imageUrl, setImageUrl] = useState("");
 
   // Setup form with default values
   const form = useForm<ProductFormValues>({
@@ -97,19 +96,6 @@ export function ProductForm({ product, categories, onSubmit, onCancel }: Product
     };
 
     onSubmit(updatedProduct);
-  };
-
-  // Add image to the list
-  const handleAddImage = () => {
-    if (imageUrl && !images.includes(imageUrl)) {
-      setImages([...images, imageUrl]);
-      setImageUrl("");
-    }
-  };
-
-  // Remove image from the list
-  const handleRemoveImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
   };
 
   return (
@@ -235,49 +221,13 @@ export function ProductForm({ product, categories, onSubmit, onCancel }: Product
               )}
             />
 
-            <div className="space-y-2">
-              <Label>Images du produit</Label>
-              <div className="flex space-x-2">
-                <Input
-                  type="url"
-                  placeholder="URL de l'image"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={handleAddImage}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {images.map((image, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={image}
-                      alt={`Product image ${index + 1}`}
-                      className="h-24 w-full object-cover rounded-md border"
-                      onError={(e) => {
-                        // If image fails to load, set a placeholder
-                        (e.target as HTMLImageElement).src = '/placeholder.svg';
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6 opacity-80"
-                      onClick={() => handleRemoveImage(index)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+            {/* Nouvelle implémentation avec ImageUpload */}
+            <div className="space-y-4">
+              <ImageUpload 
+                images={images}
+                onImagesChange={setImages}
+                maxImages={5}
+              />
             </div>
 
             <div className="space-y-4 pt-4">

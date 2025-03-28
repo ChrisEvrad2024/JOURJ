@@ -70,7 +70,124 @@ class StorageQuotaService {
         // Cette estimation est approximative et simplement basée
         // sur la taille des objets en mémoire
         // Dans un environnement réel, vous pourriez avoir besoin d'une logique plus complexe
-        return 0;
+        try {
+            if (!window.indexedDB) {
+                return 0;
+            }
+
+            // Liste des bases de données
+            const dbList = await this._getDatabaseList();
+            let totalSize = 0;
+
+            for (const dbName of dbList) {
+                try {
+                    // Estimer la taille de chaque base de données
+                    const dbSize = await this._estimateDbSize(dbName);
+                    totalSize += dbSize;
+                } catch (e) {
+                    console.warn(`Failed to estimate size of database ${dbName}:`, e);
+                }
+            }
+
+            return totalSize;
+        } catch (error) {
+            console.warn('Failed to estimate IndexedDB usage:', error);
+            return 0;
+        }
+    }
+
+    /**
+     * Récupère la liste des bases de données
+     * @returns {Promise<string[]>} - Liste des noms de bases de données
+     * @private
+     */
+    async _getDatabaseList() {
+        // Pour les navigateurs qui supportent indexedDB.databases()
+        if (indexedDB.databases && typeof indexedDB.databases === 'function') {
+            try {
+                const dbs = await indexedDB.databases();
+                return dbs.map(db => db.name);
+            } catch (e) {
+                console.warn('Failed to list databases:', e);
+                return [];
+            }
+        }
+
+        // Pas de fallback fiable pour les autres navigateurs
+        return ['chezflora_db']; // Nom de la base de données de l'application
+    }
+
+    /**
+     * Estime la taille d'une base de données
+     * @param {string} dbName - Nom de la base de données
+     * @returns {Promise<number>} - Taille estimée en octets
+     * @private
+     */
+    async _estimateDbSize(dbName) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName);
+            
+            request.onerror = () => {
+                resolve(0); // En cas d'erreur, on suppose une taille de 0
+            };
+            
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const objectStoreNames = Array.from(db.objectStoreNames);
+                let totalSize = 0;
+                
+                if (objectStoreNames.length === 0) {
+                    db.close();
+                    resolve(0);
+                    return;
+                }
+                
+                let storesProcessed = 0;
+                
+                objectStoreNames.forEach(storeName => {
+                    try {
+                        const transaction = db.transaction(storeName, 'readonly');
+                        const store = transaction.objectStore(storeName);
+                        const request = store.getAll();
+                        
+                        request.onsuccess = (event) => {
+                            const items = event.target.result;
+                            let storeSize = 0;
+                            
+                            // Estimation approximative par sérialisation JSON
+                            if (items.length > 0) {
+                                storeSize = JSON.stringify(items).length * 2; // UTF-16 = 2 bytes par caractère
+                            }
+                            
+                            totalSize += storeSize;
+                            storesProcessed++;
+                            
+                            if (storesProcessed === objectStoreNames.length) {
+                                db.close();
+                                resolve(totalSize);
+                            }
+                        };
+                        
+                        request.onerror = () => {
+                            storesProcessed++;
+                            
+                            if (storesProcessed === objectStoreNames.length) {
+                                db.close();
+                                resolve(totalSize);
+                            }
+                        };
+                    } catch (e) {
+                        console.warn(`Failed to estimate size of store ${storeName}:`, e);
+                        storesProcessed++;
+                        
+                        if (storesProcessed === objectStoreNames.length) {
+                            db.close();
+                            resolve(totalSize);
+                        }
+                    }
+                });
+            };
+        });
     }
 
     /**
@@ -119,13 +236,80 @@ class StorageQuotaService {
                 }
             }
 
-            // 2. Si on n'a pas libéré assez d'espace, supprimer d'autres données non essentielles
-            // ...
+            // 2. Si on n'a pas libéré assez d'espace, supprimer les données récemment consultées
+            const recentProductsKey = 'recentProducts';
+            if (localStorage.hasOwnProperty(recentProductsKey)) {
+                const recentProductsData = localStorage.getItem(recentProductsKey);
+                freedSpace += (recentProductsKey.length + recentProductsData.length) * 2;
+                localStorage.removeItem(recentProductsKey);
+                
+                if (freedSpace >= targetSpace) {
+                    return true;
+                }
+            }
 
-            return false;
+            // 3. Supprimer d'autres données non essentielles
+            const nonEssentialKeys = [
+                'theme',
+                'language',
+                'wishlist'
+            ];
+            
+            for (const key of nonEssentialKeys) {
+                if (localStorage.hasOwnProperty(key)) {
+                    const itemData = localStorage.getItem(key);
+                    freedSpace += (key.length + itemData.length) * 2;
+                    localStorage.removeItem(key);
+                    
+                    if (freedSpace >= targetSpace) {
+                        return true;
+                    }
+                }
+            }
+
+            return freedSpace > 0; // Retourne vrai si on a libéré de l'espace, même si pas assez
         } catch (error) {
             console.error('Failed to cleanup storage:', error);
             return false;
+        }
+    }
+
+    /**
+     * Nettoie périodiquement le stockage
+     * @param {number} interval - Intervalle en millisecondes entre chaque nettoyage
+     */
+    startPeriodicCleanup(interval = 24 * 60 * 60 * 1000) { // Par défaut: une fois par jour
+        // Arrêter tout nettoyage périodique existant
+        this.stopPeriodicCleanup();
+        
+        // Configurer un nouveau nettoyage périodique
+        this._cleanupInterval = setInterval(async () => {
+            const quotaInfo = await this.checkStorageQuota();
+            
+            // Si plus de 80% du stockage est utilisé, nettoyer
+            if (quotaInfo.percentUsed > 80) {
+                console.log(`Storage usage at ${quotaInfo.percentUsed}%, performing cleanup...`);
+                
+                // Libérer 20% du quota total
+                const targetSpace = quotaInfo.quota * 0.2;
+                const cleaned = await this.cleanupStorage(targetSpace);
+                
+                if (cleaned) {
+                    console.log('Storage cleanup successful');
+                } else {
+                    console.warn('Storage cleanup failed or insufficient');
+                }
+            }
+        }, interval);
+    }
+
+    /**
+     * Arrête le nettoyage périodique
+     */
+    stopPeriodicCleanup() {
+        if (this._cleanupInterval) {
+            clearInterval(this._cleanupInterval);
+            this._cleanupInterval = null;
         }
     }
 }

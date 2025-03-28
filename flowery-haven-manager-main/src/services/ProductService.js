@@ -30,8 +30,14 @@ class ProductService {
             const product = await DbService.getByKey(STORES.PRODUCTS, productId);
 
             if (product) {
-                // Ajouter le produit aux récemment consultés
-                this.addToRecentlyViewed(product);
+                // Ajouter le produit aux récemment consultés si ce n'est pas un accès système
+                // (en évitant les appels venant du panier qui sont fréquents)
+                const isSystemAccess = new Error().stack.includes('getCart') || 
+                                      new Error().stack.includes('cart.ts');
+                
+                if (!isSystemAccess) {
+                    this.addToRecentlyViewed(product);
+                }
             }
 
             return product;
@@ -47,31 +53,50 @@ class ProductService {
      * @private
      */
     static addToRecentlyViewed(product) {
-        const recentProducts = StorageService.getLocalStorageItem(STORAGE_KEYS.RECENT_PRODUCTS, []);
+        try {
+            // Récupérer la liste actuelle, limitée à 5 éléments maximum
+            let recentProducts = StorageService.getLocalStorageItem(STORAGE_KEYS.RECENT_PRODUCTS, []);
 
-        // Supprimer le produit s'il existe déjà
-        const filteredProducts = recentProducts.filter(p => p.id !== product.id);
+            // Supprimer le produit s'il existe déjà
+            const filteredProducts = recentProducts.filter(p => p.id !== product.id);
 
-        // Ajouter le produit au début de la liste
-        filteredProducts.unshift({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            image: product.images && product.images.length > 0 ? product.images[0] : null
-        });
+            // Créer une version simplifiée du produit avec seulement les données essentielles
+            const simplifiedProduct = {
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                // Ne stocker que la première image si elle existe
+                image: product.images && product.images.length > 0 ? product.images[0] : null
+            };
 
-        // Limiter à 5 produits récents
-        const limitedProducts = filteredProducts.slice(0, 5);
+            // Ajouter le produit au début de la liste
+            filteredProducts.unshift(simplifiedProduct);
 
-        StorageService.setLocalStorageItem(STORAGE_KEYS.RECENT_PRODUCTS, limitedProducts);
+            // Limiter à 3 produits récents pour éviter de dépasser le quota
+            const limitedProducts = filteredProducts.slice(0, 3);
+
+            // Sauvegarder la liste mise à jour
+            StorageService.setLocalStorageItem(STORAGE_KEYS.RECENT_PRODUCTS, limitedProducts);
+        } catch (error) {
+            // Si une erreur se produit, simplement logger et continuer
+            console.warn('Impossible de mettre à jour les produits récents:', error);
+        }
     }
 
     /**
      * Récupère les produits récemment consultés
+     * @param {number} limit - Nombre maximum de produits à retourner
      * @returns {Array} Liste des produits récemment consultés
      */
-    static getRecentlyViewedProducts() {
-        return StorageService.getLocalStorageItem(STORAGE_KEYS.RECENT_PRODUCTS, []);
+    static getRecentlyViewedProducts(limit = 3) {
+        try {
+            const recentProducts = StorageService.getLocalStorageItem(STORAGE_KEYS.RECENT_PRODUCTS, []);
+            // Appliquer la limite même lors de la récupération
+            return recentProducts.slice(0, limit);
+        } catch (error) {
+            console.warn('Erreur lors de la récupération des produits récents:', error);
+            return [];
+        }
     }
 
     /**
@@ -137,7 +162,7 @@ class ProductService {
             return allProducts.filter(product => {
                 return (
                     product.name.toLowerCase().includes(normalizedQuery) ||
-                    product.description.toLowerCase().includes(normalizedQuery) ||
+                    (product.description && product.description.toLowerCase().includes(normalizedQuery)) ||
                     (product.tags && product.tags.some(tag => tag.toLowerCase().includes(normalizedQuery)))
                 );
             });
